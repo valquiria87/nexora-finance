@@ -1,5 +1,3 @@
-﻿![Testes](https://github.com/valquiria87/finchat-ai/actions/workflows/main.yml/badge.svg)
-
 # Nexora Finance — Open Finance e inteligência financeira
 
 AplicaÃ§Ã£o web desenvolvida como entrega do desafio DIO Bradesco. O Nexora Finance demonstra como uma interface conversacional pode apresentar informaÃ§Ãµes financeiras de forma clara, com regras que mantÃªm saldo bancÃ¡rio, dÃ­vida de cartÃ£o e crÃ©dito disponÃ­vel separados.
