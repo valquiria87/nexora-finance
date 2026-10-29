@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getSupabaseServerClient } from "@/lib/supabase.server";
+import { getDioChatSupabaseClient } from "@/lib/dio-chat.server";
 import type { DioChatHistoryMessage, DioChatSuccess } from "@/lib/dio-chat.service";
 
 function errorJson(message: string, status: number) {
@@ -47,7 +47,7 @@ export const Route = createFileRoute("/api/dio-chat")({
           }));
 
         try {
-          const { data, error } = await getSupabaseServerClient().functions.invoke("dio-chat", {
+          const { data, error } = await getDioChatSupabaseClient().functions.invoke("dio-chat", {
             body: { mensagem, historico },
           });
 
