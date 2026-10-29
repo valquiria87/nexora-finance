@@ -200,6 +200,8 @@ export const SUGGESTIONS = [
   "Resuma minhas contas",
   "Quais foram minhas movimentações?",
   "Mostre um resumo financeiro",
+  "Quanto tenho disponível?",
+  "Quais são meus gastos por categoria?",
 ];
 
 const DEMO_NOTE = "\n\n_Resposta baseada em dados simulados de demonstração._";
