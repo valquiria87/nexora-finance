@@ -1,0 +1,26 @@
+
+name: FinChat AI - Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v5
+
+      - name: Configurar Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Instalar dependências
+        run: bun ci
+
+      - name: Executar testes
+        run: bun run test
