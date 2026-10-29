@@ -27,6 +27,7 @@ import {
   type DemoTransaction,
   type FinanceDataProvider,
 } from "@/lib/finance";
+import { askDioChat, type DioChatHistoryMessage } from "@/lib/dio-chat.service";
 import type { PluggyAccount, PluggyTransaction } from "@/lib/pluggy.server";
 
 export const Route = createFileRoute("/")({
@@ -224,37 +225,126 @@ function Index() {
       setConnecting(false);
     }
   };
-  const send = (text: string) => {
-    const t = text.trim();
-    if (!t || typing) return;
-    const userMsg: Msg = { id: uid(), role: "user", text: t };
-    let id = activeId;
-    let list = convs;
-    if (!id) {
-      id = uid();
-      list = [{ id, title: t.slice(0, 48), updatedAt: Date.now(), messages: [] }, ...convs];
-      setActiveId(id);
-    }
-    const cid = id;
-    const withUser = list.map((c) =>
-      c.id === cid ? { ...c, messages: [...c.messages, userMsg], updatedAt: Date.now() } : c,
-    );
-    persist(withUser);
-    setInput("");
-    setTyping(true);
-    // Ponto de integraÃ§Ã£o futura: substituir answer() por chamada ao backend.
-    setTimeout(() => {
-      const reply: Msg = { id: uid(), role: "assistant", text: answer(t) };
-      setConvs((prev) => {
-        const next = prev.map((c) =>
-          c.id === cid ? { ...c, messages: [...c.messages, reply], updatedAt: Date.now() } : c,
+  const submitToDioChat = async (
+    question: string,
+    conversationId: string,
+    userMessageId: string,
+    history: DioChatHistoryMessage[],
+  ) => {
+    try {
+      const result = await askDioChat(question, history);
+      const reply: Msg = {
+        id: uid(),
+        role: "assistant",
+        text: result.resposta,
+        responseStatus: "success",
+        mode: result.modo,
+        meta: result.meta,
+      };
+      setConvs((previous) => {
+        const next = previous.map((conversation) =>
+          conversation.id === conversationId
+            ? { ...conversation, messages: [...conversation.messages, reply], updatedAt: Date.now() }
+            : conversation,
         );
         save(next);
         return next;
       });
+    } catch (cause) {
+      const reply: Msg = {
+        id: uid(),
+        role: "assistant",
+        text: answer(question),
+        responseStatus: "demo",
+        errorMessage:
+          cause instanceof Error
+            ? cause.message
+            : "Não foi possível consultar o assistente conectado. Tente novamente.",
+        retryUserMessageId: userMessageId,
+      };
+      setConvs((previous) => {
+        const next = previous.map((conversation) =>
+          conversation.id === conversationId
+            ? { ...conversation, messages: [...conversation.messages, reply], updatedAt: Date.now() }
+            : conversation,
+        );
+        save(next);
+        return next;
+      });
+    } finally {
       setTyping(false);
       inputRef.current?.focus();
-    }, 600);
+    }
+  };
+
+  const send = (text: string) => {
+    const question = text.trim();
+    if (!question || typing) return;
+    if (question.length > 1000) {
+      setError("A mensagem deve ter no máximo 1.000 caracteres.");
+      return;
+    }
+
+    const userMsg: Msg = { id: uid(), role: "user", text: question };
+    let conversationId = activeId;
+    let list = convs;
+    if (!conversationId || !convs.some((conversation) => conversation.id === conversationId)) {
+      conversationId = uid();
+      list = [
+        { id: conversationId, title: question.slice(0, 48), updatedAt: Date.now(), messages: [] },
+        ...convs,
+      ];
+      setActiveId(conversationId);
+    }
+
+    const previousMessages = list.find((conversation) => conversation.id === conversationId)?.messages ?? [];
+    const history = previousMessages
+      .slice(-12)
+      .map((message) => ({ role: message.role, content: message.text }));
+    const withUser = list.map((conversation) =>
+      conversation.id === conversationId
+        ? { ...conversation, messages: [...conversation.messages, userMsg], updatedAt: Date.now() }
+        : conversation,
+    );
+
+    persist(withUser);
+    setInput("");
+    setError("");
+    setTyping(true);
+    void submitToDioChat(question, conversationId, userMsg.id, history);
+  };
+
+  const retryChat = (userMessageId: string) => {
+    if (typing) return;
+    const conversation = convs.find((entry) =>
+      entry.messages.some((message) => message.id === userMessageId && message.role === "user"),
+    );
+    if (!conversation) return;
+
+    const userIndex = conversation.messages.findIndex((message) => message.id === userMessageId);
+    const userMessage = conversation.messages[userIndex];
+    if (!userMessage || userMessage.role !== "user") return;
+
+    const history = conversation.messages
+      .slice(0, userIndex)
+      .slice(-12)
+      .map((message) => ({ role: message.role, content: message.text }));
+    const nextConversations = convs.map((entry) =>
+      entry.id === conversation.id
+        ? {
+            ...entry,
+            messages: entry.messages.filter(
+              (message) => !(message.role === "assistant" && message.retryUserMessageId === userMessageId),
+            ),
+            updatedAt: Date.now(),
+          }
+        : entry,
+    );
+    persist(nextConversations);
+    setActiveId(conversation.id);
+    setError("");
+    setTyping(true);
+    void submitToDioChat(userMessage.text, conversation.id, userMessageId, history);
   };
 
   const newChat = () => {
@@ -561,10 +651,10 @@ function Index() {
                 </p>
               </div>
               <div className="nexora-demo-banner">
-                <span className="nexora-demo-tag">CHAT DEMO</span>
+                <span className="nexora-demo-tag">Demonstração · Dados fictícios</span>
                 <span>
-                  As respostas do assistente usam somente dados sintéticos de demonstração; seus
-                  dados Pluggy não são usados neste chat.
+                  A integração só será indicada após uma resposta bem-sucedida. Se ela falhar,
+                  o assistente usa os dados locais de demonstração.
                 </span>
               </div>
               <div className="nexora-chat-thread">
@@ -583,14 +673,17 @@ function Index() {
                   </div>
                 )}
                 {messages.map((message) => (
-                  <ChatMessage key={message.id} msg={message} />
+                  <ChatMessage key={message.id} msg={message} onRetry={retryChat} />
                 ))}
                 {typing && (
                   <div
                     className="flex items-center gap-2 text-xs text-muted-foreground"
                     role="status"
                   >
-                    <LoaderCircle className="h-4 w-4 animate-spin" /> Preparando resposta…
+                    <LoaderCircle className="h-4 w-4 animate-spin" />{" "}
+                    {convs.some((conversation) => conversation.messages.some((message) => message.responseStatus === "success"))
+                      ? "Consultando os dados de teste…"
+                      : "Preparando os dados de teste…"}
                   </div>
                 )}
                 <div ref={endRef} />
@@ -609,6 +702,7 @@ function Index() {
                     rows={2}
                     value={input}
                     onChange={(event) => setInput(event.target.value)}
+                    maxLength={1000}
                     onKeyDown={(event) => {
                       if (
                         event.key === "Enter" &&
@@ -629,8 +723,9 @@ function Index() {
                     <SendHorizontal />
                   </Button>
                 </div>
-                <p className="mb-0 mt-1 px-3 text-[10px] text-muted-foreground">
-                  Enter envia · Shift + Enter quebra a linha
+                <p className="mb-0 mt-1 flex justify-between gap-2 px-3 text-[10px] text-muted-foreground">
+                  <span>Enter envia · Shift + Enter quebra a linha</span>
+                  <span>{input.length}/1.000</span>
                 </p>
               </form>
             </div>
