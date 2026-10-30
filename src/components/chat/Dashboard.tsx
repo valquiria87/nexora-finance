@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from "react";
 import {
   demoProvider,
+  automaticSpendingInsights,
   isExpense,
   latestTransactions,
   spendingByCategory,
@@ -65,6 +66,7 @@ export function Dashboard({
   };
 
   const categories = spendingByCategory(txs);
+  const insights = automaticSpendingInsights(txs);
   const categoryTotals = new Map<string, number>();
   const categoryMax = new Map<string, number>();
   for (const category of categories) {
@@ -81,7 +83,7 @@ export function Dashboard({
     section === "accounts" ? "Contas" : section === "transactions" ? "Transações" : "Visão geral";
 
   return (
-    <section className="nexora-page" aria-label={title}>
+    <section className="nexora-page" aria-label={`Nexora Finance: ${title}`}>
       {!compact && (
         <div className="nexora-page-heading">
           <div>
@@ -215,6 +217,41 @@ export function Dashboard({
                       );
                     })}
                   </div>
+                </article>
+              )}
+              {insights.length > 0 && (
+                <article className="nexora-panel">
+                  <div className="nexora-panel-heading">
+                    <div>
+                      <p className="nexora-eyebrow">INSIGHTS AUTOMÁTICOS</p>
+                      <h2>Padrões observados nas saídas</h2>
+                    </div>
+                  </div>
+                  <ul className="grid gap-3">
+                    {insights.map((insight, index) => {
+                      const currency =
+                        insight.currency ?? (provider.mode === "demo" ? "BRL" : null);
+                      const description =
+                        insight.type === "top-category"
+                          ? `${insight.category} concentra ${(insight.share * 100).toFixed(1)}% das saídas.`
+                          : insight.type === "largest-expense"
+                            ? `Maior saída individual: ${insight.description}.`
+                            : `Média por saída: ${insight.count} transações no cálculo.`;
+                      const amount = money(insight.amount, currency);
+                      return (
+                        <li
+                          className="flex items-start justify-between gap-4 text-sm"
+                          key={`${insight.type}-${currency ?? "unknown"}-${index}`}
+                        >
+                          <span>{description}</span>
+                          <strong className="shrink-0">{amount}</strong>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Resumo descritivo dos registros disponíveis; não é aconselhamento financeiro.
+                  </p>
                 </article>
               )}
             </>

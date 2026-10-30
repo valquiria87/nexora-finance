@@ -1,149 +1,141 @@
-# Nexora Finance — Open Finance e assistente financeiro
+![CI](https://github.com/valquiria87/nexora-finance/actions/workflows/main.yml/badge.svg)
 
-Projeto desenvolvido para o desafio de Open Finance da DIO, com uma interface financeira responsiva, painel de contas e transações, conexão bancária por meio da Pluggy e assistente conversacional em português.
+# Nexora Finance
 
-> **Aviso:** este projeto é educacional. O modo de demonstração utiliza dados fictícios. Conexões Pluggy Sandbox também retornam dados sintéticos. Não utilize os dados exibidos para decisões financeiras reais.
+O **Nexora Finance** é uma demonstração educacional de chat financeiro em português com o assistente **Dio**. A interface explora contas, saldos e transações fictícias com Pluggy, Supabase e ferramentas de desenvolvimento MCP. Não é um produto bancário nem deve ser usado para decisões financeiras reais.
 
-## Funcionalidades
+> **Demonstração · Dados fictícios.** O modo local não precisa de credenciais. O Sandbox da Plaid e o Sandbox da Pluggy também usam dados sintéticos.
 
-- Painel financeiro com visão de contas, saldos disponíveis, dívidas de cartão, transações e gastos por categoria.
-- Conexão com instituições por meio do widget oficial Pluggy Connect.
-- Consultas à API Pluggy realizadas no servidor; credenciais e identificadores de conexão não são usados como autorização no navegador.
-- Modo de demonstração local, sem necessidade de credenciais, para permitir explorar a interface.
-- Chat em português, com histórico local de conversas, sugestões, estado de carregamento, tratamento de falhas e nova tentativa.
-- Integração do chat com a Supabase Edge Function \`dio-chat\`, por meio de uma rota server-side.
-- Regras financeiras que mantêm dinheiro em contas, dívida de cartão e crédito disponível em campos separados.
+## Demonstração e estado da entrega
+
+- **Demo pública:** <https://pocketwise-finance-chat.lovable.app>
+- A versão publicada conhecida é anterior a este checkout e não comprova a integração atual com a Edge Function nem as melhorias deste repositório. Atualize e revise o projeto Lovable antes de publicar uma nova versão.
+- Nenhum deploy/publicação automática foi feito por este trabalho.
+- A Edge Function `dio-chat` é hospedada fora deste repositório. A chamada do app está implementada, mas a função e sua execução interna de MCP precisam ser confirmadas no projeto Supabase de destino.
+
+## Cenário e origem dos dados
+
+O cenário é um chat financeiro demonstrativo: a pessoa consulta contas de exemplo, dinheiro disponível, dívidas de cartão, movimentações e saídas por categoria. Não se afirma a existência de uma instituição, varejista ou agência de viagens parceira.
+
+| Informação | Origem | Limite |
+| --- | --- | --- |
+| Contas e saldos locais | `DEMO_ACCOUNTS` em `src/lib/finance.ts` | Dados fictícios estáticos, não obtidos da Plaid em tempo real. |
+| Transações locais | `DEMO_TRANSACTIONS` em `src/lib/finance.ts` | Amostra ilustrativa de oito registros; não é um extrato completo nem conciliado. |
+| Contas e transações Pluggy | Rotas server-side Pluggy e provedor do painel | Disponíveis após autorização de uma sessão Pluggy; não recalculam o saldo local. |
+| Resposta de Dio | `dio-chat` via `src/lib/chat-service.ts` e `src/lib/dio-chat.service.ts` | A função remota não está versionada neste repositório; em falha, a UI identifica o fallback local. |
+| Plaid Sandbox | MCP local configurado em `.vscode/mcp.json` | Laboratório separado; suas consultas não alimentam os dados estáticos do dashboard. |
+| Documentação Pluggy | MCP remoto `https://mcp.pluggy.ai/mcp` | Documentação, não acesso a contas bancárias. |
+
+O sinal das transações segue a convenção Plaid adotada pelo app: valor positivo é saída e negativo é entrada. **O saldo bancário não é calculado a partir da amostra de transações.** Dívida e crédito disponível do cartão permanecem separados do dinheiro em conta. Não há conversão automática entre moedas.
 
 ## Arquitetura
 
-\`\`\`text
-Navegador
-  ├── Painel / Pluggy Connect
-  │     └── Rotas server-side /api/pluggy-*
-  │           └── API Pluggy
-  │
-  └── Chat
-        └── POST /api/dio-chat
-              └── Supabase Edge Function: dio-chat
-                    └── resposta do assistente
-\`\`\`
+```mermaid
+flowchart LR
+  Browser["React / TanStack UI"] --> ChatService["Serviço substituível"]
+  ChatService --> DioRoute["POST /api/dio-chat"]
+  DioRoute --> Supabase["Supabase Edge Function: dio-chat"]
+  Supabase -. "pendente: publicar e validar" .-> Plaid["Plaid Sandbox"]
+  Browser --> Demo["Demo local fictícia"]
+  Browser --> PluggyRoutes["Rotas server-side Pluggy"]
+  PluggyRoutes --> PluggyAPI["API Pluggy"]
+  PluggyMCP["Pluggy Docs MCP"] -. "documentação" .-> DevAI["Cliente de desenvolvimento"]
+  PlaidMCP["Plaid Sandbox MCP"] -. "testes manuais" .-> DevAI
+```
 
-### Chat e Supabase
+O fluxo do chat mantém a integração fora dos componentes: UI → serviço substituível → rota server-side → Supabase Edge Function. A rota valida entradas com Zod, limita a pergunta a 1.000 caracteres, repete falhas temporárias até três tentativas e valida o formato de resposta. Logs estruturados não registram perguntas, tokens ou credenciais.
 
-O navegador envia a pergunta para \`POST /api/dio-chat\`. A rota valida a mensagem e o histórico, limita o histórico às 12 mensagens mais recentes e chama a função publicada no Supabase:
+Os MCPs Pluggy e Plaid configurados no ambiente de desenvolvimento não são chamados pelo navegador nem pelo chat publicado. O Pluggy Docs MCP é documental; ele não é, por si só, um MCP de dados financeiros.
 
-\`\`\`ts
-supabase.functions.invoke("dio-chat", {
-  body: { mensagem, historico },
-});
-\`\`\`
+## Funcionalidades e avaliação
 
-O payload contém \`mensagem\` e \`historico\`, sendo cada item do histórico formado por \`{ role: "user" | "assistant", content: string }\`. A interface espera uma resposta com \`resposta\`, \`modo\` e \`meta\` (período, quantidade de registros e fonte).
+- Painel de contas e transações, cinco sugestões no código, nova conversa e histórico local.
+- Resposta do chat em Markdown com tabelas roláveis horizontalmente, modo e metadados. O selo de integração ativa depende de uma resposta remota válida; em falha, a UI apresenta a resposta local como demonstração.
+- Insights descritivos dos registros carregados: categoria com maior saída, maior saída individual e média por saída. Entradas são excluídas e moedas diferentes não são somadas.
+- Classificador determinístico de descrições com fallback `Outros`.
+- Testes offline para helpers Plaid, contratos, retries, insights, configuração MCP e painel.
+- GitHub Actions para testes, avaliação de categorização, typecheck, lint e build.
 
-A implementação da rota e do cliente server-side está versionada em:
-- \`src/routes/api.dio-chat.ts\`
-- \`src/lib/dio-chat.server.ts\`
-- \`src/lib/dio-chat.service.ts\`
+### Avaliação da categorização
 
-**Importante:** o código-fonte da Edge Function \`dio-chat\` permanece no projeto Supabase e não está armazenado neste repositório. Este repositório documenta e implementa a chamada feita pela aplicação; não afirma que o código remoto da função ou a execução interna de ferramentas MCP foi auditada aqui. Para reproduzir integralmente o backend, a função também precisa ser versionada em um repositório ou exportada como artefato, sem incluir segredos.
+`data/categorization-evaluation.csv` contém **120 transações fictícias rotuladas**, com 12 exemplos por classe. O classificador acertou **120/120 (100%)** neste conjunto. Reproduza a avaliação com:
 
-### Pluggy
+```bash
+bun run evaluate:categorization
+```
 
-A aplicação usa o servidor TanStack Start para criar Connect Tokens, receber o resultado do widget Pluggy Connect e consultar contas e transações no servidor. O vínculo da conexão é mantido por cookie assinado, \`HttpOnly\`, com identidade de demonstração por navegador.
-
-O fluxo atual não é um sistema de autenticação multiusuário nem uma implementação de produção. A documentação técnica e as limitações estão em [docs/pluggy-integration.md](docs/pluggy-integration.md).
-
-### MCP: distinção importante
-
-O Pluggy Docs MCP é um servidor remoto para consultar a documentação da Pluggy. Ele não equivale, por si só, a um servidor MCP que disponibiliza dados financeiros da pessoa usuária. A pesquisa conceitual sobre o objeto Item está em [docs/pluggy-mcp-item.md](docs/pluggy-mcp-item.md).
-
-A existência de um MCP financeiro e a execução de ferramentas MCP dentro da Edge Function \`dio-chat\` não podem ser comprovadas somente pelo código deste repositório, pois a implementação remota da função não está versionada aqui. Não descreva essa parte como testada sem anexar o código ou evidências da execução.
-
-## Regras e dados financeiros
-
-- Sem conexão Pluggy ativa, o painel usa \`DEMO_ACCOUNTS\` e \`DEMO_TRANSACTIONS\` de \`src/lib/finance.ts\`.
-- Os dados de demonstração são fictícios e não representam um extrato bancário completo.
-- O saldo disponível considera apenas contas corrente e poupança.
-- Dívidas e limites de cartão não são somados ao dinheiro disponível.
-- Valor positivo em uma transação representa saída/despesa; valor negativo representa entrada.
-- As transações são uma amostra ilustrativa e não reconciliam nem recalculam o saldo das contas.
-- Valores ausentes são exibidos como não informados, sem estimativas.
-
-## Tecnologias
-
-- React 19 e TypeScript
-- TanStack Start e TanStack Router
-- Vite
-- Tailwind CSS v4
-- Supabase JavaScript Client
-- Pluggy Connect e API Pluggy
-- Vitest, Testing Library e jsdom
-- Bun
-- Lucide React e Recharts
+Esse resultado não representa acurácia em transações reais nem estima generalização: as descrições foram construídas para exercitar as regras do classificador. A melhoria pendente é avaliar 100–200 transações Sandbox independentes, rotuladas manualmente, e publicar protocolo, matriz de confusão e erros.
 
 ## Executar localmente
 
-Requisito: [Bun](https://bun.sh).
+Requisitos: Bun e Node.js.
 
-\`\`\`bash
+```bash
 bun install
 bun run dev
-\`\`\`
+```
 
-Para executar os testes, lint e build:
+Verificações automatizadas:
 
-\`\`\`bash
+```bash
 bun run test
+bun run evaluate:categorization
+bun run typecheck
 bun run lint
 bun run build
-\`\`\`
+```
 
-A demonstração local pode ser aberta sem credenciais. Para testar a conexão Pluggy e o chat conectado, configure as variáveis server-side descritas em [\`.env.example\`](.env.example). Nunca coloque credenciais em variáveis \`VITE_*\`, no código do navegador, em capturas de tela ou no Git.
+O modo demonstração local não requer credenciais. Para testar integrações, configure variáveis somente no ambiente server-side conforme `.env.example`. Nunca use prefixo `VITE_` para segredos. A chave Supabase `service_role` tem privilégios elevados e nunca deve entrar no bundle do navegador.
 
-## Variáveis de ambiente
+## Configuração dos MCPs de desenvolvimento
 
-Copie \`.env.example\` para \`.env\` e preencha somente no ambiente local ou no provedor de hospedagem:
+### Pluggy Docs MCP
 
-| Variável | Uso |
-| --- | --- |
-| \`PLUGGY_CLIENT_ID\` / \`PLUGGY_CLIENT_SECRET\` | Credenciais da API Pluggy, somente no servidor |
-| \`FINCHAT_SESSION_SECRET\` | Assinatura dos cookies de sessão de demonstração |
-| \`SUPABASE_URL\` / \`SUPABASE_SERVICE_ROLE_KEY\` | Cliente server-side usado para invocar a Edge Function |
-| \`DIO_CHAT_SUPABASE_URL\` / \`DIO_CHAT_SUPABASE_SERVICE_ROLE_KEY\` | Opcionais, apenas se \`dio-chat\` estiver em outro projeto Supabase |
-| \`PLUGGY_WEBHOOK_SECRET\` | Segredo para validar notificações de webhook, se configurado |
+`.vscode/mcp.json` configura `pluggy` como servidor HTTP em `https://mcp.pluggy.ai/mcp`, sem chave. Reinicie o cliente e verifique `/mcp`. O servidor serve para pesquisar documentação e não cria ou autoriza uma conexão bancária.
 
-A chave \`service_role\` concede privilégios elevados. Ela deve permanecer exclusivamente no servidor e nunca ser exposta ao navegador. Não envie valores dessas variáveis por chat ou documentação.
+Para a definição conceitual de **Item**, consulte [`docs/pluggy-mcp-item.md`](./docs/pluggy-mcp-item.md).
 
-## Testes e integração contínua
+### Plaid Sandbox MCP
 
-Os testes automatizados ficam em \`src/test/\` e são executados com Vitest. O workflow do GitHub Actions executa testes, lint e build em pushes e pull requests para \`main\`.
+No Windows, a configuração STDIO chama `.vscode/start-plaid-mcp.ps1`. O launcher lê `PLAID_CLIENT_ID` e `PLAID_SECRET` de `.env.plaid` e inicia `uvx mcp-server-plaid`. Esse arquivo é ignorado pelo Git. Crie-o localmente, instale `uv`/`uvx`, ajuste o caminho de `uvx.exe` no launcher se necessário e reinicie o cliente.
 
-A aprovação do workflow valida o código versionado. Ela não substitui um teste funcional com a Edge Function publicada, uma conexão Pluggy Sandbox ou uma sessão MCP real.
+Não versionar nem compartilhar `.env.plaid`, Client ID, secret, access token ou capturas com credenciais. O teste automatizado verifica a configuração, mas não inicia o servidor nem chama a Plaid.
 
-## Evidências para a entrega
+O código do app em `src/lib/plaid/` contém mapeadores e paginação puros, não um servidor MCP. Seus testes são offline. O CI não autentica em serviços externos nem executa chamadas MCP.
 
-Antes de apresentar o desafio, reúna evidências próprias e sem credenciais visíveis:
+## Segurança e privacidade
 
-1. Tela do painel em modo de demonstração, com o aviso de dados fictícios.
-2. Conexão Pluggy Sandbox concluída e dados sintéticos carregados, se esse fluxo fizer parte da demonstração.
-3. Conversa real com a Edge Function \`dio-chat\`, incluindo uma pergunta sobre contas ou transações.
-4. Evidência da execução das ferramentas MCP exigidas pelo enunciado, mostrando nome da ferramenta, parâmetros não sensíveis e resultado.
-5. Capturas da interface em desktop e celular.
+Consulte [`SECURITY.md`](./SECURITY.md) para o modelo de ameaça, fronteiras dos segredos, retenção/exclusão e riscos conhecidos. O histórico do chat fica no `localStorage` do navegador até ser apagado; perguntas e histórico recente são enviados à função externa, cuja política de retenção precisa ser confirmada.
 
-Não use números do laboratório, exemplos do professor ou dados fictícios como se fossem resultados de uma conta real. Não inclua tokens, chaves, cookies, identificadores privados ou dados pessoais.
+Não há autenticação multiusuário para a conexão Pluggy atual: a identidade é estado demonstrativo por navegador. Não use dados bancários reais. OAuth para um futuro MCP financeiro é evolução, não implementação atual; a autorização e resolução do Item deverão ocorrer no servidor, sem aceitar token enviado pelo cliente.
 
-## Estado e limites conhecidos
+## Decisões técnicas (ADR curtos)
 
-- A chamada da aplicação para a Edge Function \`dio-chat\` está implementada nesta branch.
-- O código-fonte da Edge Function publicada não está incluído neste repositório.
-- O painel Pluggy é executado por rotas server-side e pode operar com Sandbox; Sandbox contém dados sintéticos.
-- O Pluggy Docs MCP é documentação, não prova de acesso a dados financeiros via MCP.
-- A sessão Pluggy atual é uma identidade de demonstração por navegador, não autenticação multiusuário.
-- A validação final da integração remota exige teste funcional no ambiente Supabase/Pluggy e evidências da execução MCP.
+1. **Serviço substituível:** a UI não conhece o SDK Supabase; o backend pode ser substituído sem reescrever componentes.
+2. **Segredos server-side:** chaves privilegiadas nunca entram no bundle; handlers limitam operações e não devolvem credenciais.
+3. **Saldos não vêm das transações:** a amostra é parcial; somá-la às contas criaria um saldo fictício.
+4. **Pluggy Docs MCP não é o backend de dados:** documentação e acesso financeiro consentido são integrações distintas.
+5. **OAuth para MCP é evolução:** uma ferramenta futura deve autenticar a pessoa e resolver seu Item no servidor, sem aceitar Item ID/token fornecido pelo cliente.
+6. **Sandbox não representa Open Finance brasileiro:** os dados são sintéticos e não substituem consentimento e controles brasileiros.
 
-## Referências
+## Pendências para o Lovable e Supabase
 
-- [Pluggy Docs](https://docs.pluggy.ai/)
-- [Pluggy MCP](https://mcp.pluggy.ai/mcp)
-- [Supabase Edge Functions](https://supabase.com/docs/guides/functions)
-- [DIO](https://www.dio.me/)
+1. Atualize o projeto Lovable correspondente à demo com este checkout, preservando TanStack Start, modo demo e serviço do chat. Use o [`docs/lovable-handoff.md`](./docs/lovable-handoff.md).
+2. Publique `dio-chat` no projeto Supabase correto, configure segredos somente no servidor e valide o contrato `{ resposta, modo, meta }` / `{ erro }`. O código da função não está neste repositório.
+3. Valide de ponta a ponta resposta real, timeout, retry, fallback, tabela em celular, sugestões, histórico e exclusão. Confirme que o selo só aparece após resposta remota válida.
+4. Confira a experiência em desktop e celular, o aviso de dados fictícios e a marca Nexora; publique manualmente e atualize este README com o estado confirmado.
+5. Para concluir a evolução MCP, implemente OAuth, autorização por Item no servidor e ferramentas somente de leitura, com testes de contrato e isolamento entre usuários.
+
+## O que eu faria diferente
+
+- Definiria desde o início a fronteira entre demonstração estática, MCP documental, MCP Sandbox e backend do produto.
+- Implementaria e testaria a Edge Function antes de exibir qualquer estado de integração.
+- Avaliaria categorização em amostra independente, incluindo transferências, estornos, moedas e descrições ambíguas.
+- Publicaria primeiro um preview com dados sintéticos e health check, depois validaria a experiência Lovable.
+
+## Materiais do desafio
+
+- [Apresentação da aula](https://hermes.dio.me/files/assets/e0d3f15d-6418-4ca0-98a7-4130b7832c43.pdf)
+- [Guia prático do instrutor](https://hermes.dio.me/files/assets/0e56ff91-f2bd-4f37-bd37-a330f5a844f2.pdf)
+- [Integração Pluggy deste projeto](./docs/pluggy-integration.md)
+- [Relatório agregado P07](./docs/evidencias/P07-RESULTADO.md)

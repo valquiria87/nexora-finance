@@ -11,6 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "evaluate:categorization": "bun scripts/evaluate-categorization.ts",
     "test:watch": "vitest"
   },
   "overrides": {

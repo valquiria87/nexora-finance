@@ -16,8 +16,8 @@ import {
   MessageCircle,
   RefreshCw,
 } from "lucide-react";
-import { ChatMessage, type Msg } from "@/components/finchat/ChatMessage";
-import { Dashboard } from "@/components/finchat/Dashboard";
+import { ChatMessage, type Msg } from "@/components/chat/ChatMessage";
+import { Dashboard } from "@/components/chat/Dashboard";
 import { Button } from "@/components/ui/button";
 import {
   SUGGESTIONS,
@@ -27,22 +27,26 @@ import {
   type DemoTransaction,
   type FinanceDataProvider,
 } from "@/lib/finance";
-import { askDioChat, type DioChatHistoryMessage } from "@/lib/dio-chat.service";
+import { backendChatService } from "@/lib/chat-service";
+import { MAX_CHAT_MESSAGE_LENGTH } from "@/lib/chat-contract";
+import { categorizeTransaction } from "@/lib/categorization";
 import type { PluggyAccount, PluggyTransaction } from "@/lib/pluggy.server";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Nexora Finance | Open Finance" },
+      { title: "Nexora Finance | Inteligência financeira em um só lugar." },
       {
         name: "description",
-        content: "Open Finance e inteligência financeira em uma experiência segura e conectada.",
+        content:
+          "Nexora Finance: inteligência financeira em um só lugar, com o assistente Dio e dados de demonstração fictícios.",
       },
-      { property: "og:title", content: "Nexora Finance | Open Finance" },
+      { property: "og:title", content: "Nexora Finance" },
       {
         property: "og:description",
-        content: "Acompanhe contas e movimentações em um só lugar.",
+        content: "Inteligência financeira em um só lugar. Converse com o assistente Dio.",
       },
+      { property: "og:site_name", content: "Nexora Finance" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -57,7 +61,27 @@ interface Conversation {
   messages: Msg[];
 }
 const KEY = "finchat-conversations";
+const CHAT_TIMEOUT_MS = 60_000;
 const uid = () => Math.random().toString(36).slice(2, 10);
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(
+      () => reject(new Error("A resposta demorou mais de 60 segundos. Tente novamente.")),
+      timeoutMs,
+    );
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (cause: unknown) => {
+        window.clearTimeout(timer);
+        reject(cause);
+      },
+    );
+  });
+}
 
 function Index() {
   const [convs, setConvs] = useState<Conversation[]>([]);
@@ -65,6 +89,7 @@ function Index() {
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
   const [typing, setTyping] = useState(false);
+  const [preparingData, setPreparingData] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [section, setSection] = useState<"overview" | "accounts" | "transactions" | "chat">(
     "overview",
@@ -181,6 +206,7 @@ function Index() {
   };
   const active = convs.find((c) => c.id === activeId);
   const messages = active?.messages ?? [];
+  const latestAssistant = [...messages].reverse().find((message) => message.role === "assistant");
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -224,136 +250,118 @@ function Index() {
       setConnecting(false);
     }
   };
-  const submitToDioChat = async (
+  const requestReply = async (
     question: string,
     conversationId: string,
     userMessageId: string,
-    history: DioChatHistoryMessage[],
+    previousMessages: Msg[],
+    replaceAssistantId?: string,
   ) => {
+    const history = [...previousMessages, { role: "user" as const, text: question }]
+      .slice(-20)
+      .map((message) => ({ role: message.role, content: message.text }));
+    setPreparingData(
+      !previousMessages.some((message) => message.mode === "claude" || message.mode === "regras"),
+    );
+    setTyping(true);
     try {
-      const result = await askDioChat(question, history);
+      const result = await withTimeout(backendChatService.ask(question, history), CHAT_TIMEOUT_MS);
       const reply: Msg = {
-        id: uid(),
+        id: replaceAssistantId ?? uid(),
         role: "assistant",
         text: result.resposta,
-        responseStatus: "success",
         mode: result.modo,
         meta: result.meta,
       };
       setConvs((previous) => {
-        const next = previous.map((conversation) =>
-          conversation.id === conversationId
-            ? {
-                ...conversation,
-                messages: [...conversation.messages, reply],
-                updatedAt: Date.now(),
-              }
-            : conversation,
-        );
+        const next = previous.map((conversation) => {
+          if (conversation.id !== conversationId) return conversation;
+          const messages = [...conversation.messages];
+          const replaceIndex = replaceAssistantId
+            ? messages.findIndex((message) => message.id === replaceAssistantId)
+            : -1;
+          if (replaceIndex >= 0) messages[replaceIndex] = reply;
+          else messages.push(reply);
+          return { ...conversation, messages, updatedAt: Date.now() };
+        });
         save(next);
         return next;
       });
     } catch (cause) {
+      const errorMessage =
+        cause instanceof Error && cause.message
+          ? cause.message
+          : "Não foi possível consultar o assistente financeiro. Tente novamente.";
       const reply: Msg = {
-        id: uid(),
+        id: replaceAssistantId ?? uid(),
         role: "assistant",
         text: answer(question),
-        responseStatus: "demo",
-        errorMessage:
-          cause instanceof Error
-            ? cause.message
-            : "Não foi possível consultar o assistente conectado. Tente novamente.",
+        mode: "demo",
+        errorMessage,
         retryUserMessageId: userMessageId,
       };
       setConvs((previous) => {
-        const next = previous.map((conversation) =>
-          conversation.id === conversationId
-            ? {
-                ...conversation,
-                messages: [...conversation.messages, reply],
-                updatedAt: Date.now(),
-              }
-            : conversation,
-        );
+        const next = previous.map((conversation) => {
+          if (conversation.id !== conversationId) return conversation;
+          const messages = [...conversation.messages];
+          const replaceIndex = replaceAssistantId
+            ? messages.findIndex((message) => message.id === replaceAssistantId)
+            : -1;
+          if (replaceIndex >= 0) messages[replaceIndex] = reply;
+          else messages.push(reply);
+          return { ...conversation, messages, updatedAt: Date.now() };
+        });
         save(next);
         return next;
       });
     } finally {
       setTyping(false);
+      setPreparingData(false);
       inputRef.current?.focus();
     }
   };
 
   const send = (text: string) => {
-    const question = text.trim();
-    if (!question || typing) return;
-    if (question.length > 1000) {
-      setError("A mensagem deve ter no máximo 1.000 caracteres.");
+    const t = text.trim();
+    if (!t || typing) return;
+    if (t.length > MAX_CHAT_MESSAGE_LENGTH) {
+      setError(`A mensagem deve ter no máximo ${MAX_CHAT_MESSAGE_LENGTH} caracteres.`);
       return;
     }
-
-    const userMsg: Msg = { id: uid(), role: "user", text: question };
-    let conversationId = activeId;
+    const userMsg: Msg = { id: uid(), role: "user", text: t };
+    let id = activeId;
     let list = convs;
-    if (!conversationId || !convs.some((conversation) => conversation.id === conversationId)) {
-      conversationId = uid();
-      list = [
-        { id: conversationId, title: question.slice(0, 48), updatedAt: Date.now(), messages: [] },
-        ...convs,
-      ];
-      setActiveId(conversationId);
+    if (!id) {
+      id = uid();
+      list = [{ id, title: t.slice(0, 48), updatedAt: Date.now(), messages: [] }, ...convs];
+      setActiveId(id);
     }
-
-    const previousMessages =
-      list.find((conversation) => conversation.id === conversationId)?.messages ?? [];
-    const history = previousMessages
-      .slice(-12)
-      .map((message) => ({ role: message.role, content: message.text }));
-    const withUser = list.map((conversation) =>
-      conversation.id === conversationId
-        ? { ...conversation, messages: [...conversation.messages, userMsg], updatedAt: Date.now() }
-        : conversation,
+    const cid = id;
+    const previousMessages = list.find((conversation) => conversation.id === cid)?.messages ?? [];
+    const withUser = list.map((c) =>
+      c.id === cid ? { ...c, messages: [...c.messages, userMsg], updatedAt: Date.now() } : c,
     );
-
     persist(withUser);
     setInput("");
     setError("");
-    setTyping(true);
-    void submitToDioChat(question, conversationId, userMsg.id, history);
+    void requestReply(t, cid, userMsg.id, previousMessages);
   };
 
-  const retryChat = (userMessageId: string) => {
-    if (typing) return;
-    const conversation = convs.find((entry) =>
-      entry.messages.some((message) => message.id === userMessageId && message.role === "user"),
+  const retryMessage = (failedMessage: Msg) => {
+    if (typing || !activeId || !failedMessage.retryUserMessageId) return;
+    const userIndex = messages.findIndex(
+      (message) => message.id === failedMessage.retryUserMessageId,
     );
-    if (!conversation) return;
-
-    const userIndex = conversation.messages.findIndex((message) => message.id === userMessageId);
-    const userMessage = conversation.messages[userIndex];
+    if (userIndex < 0) return;
+    const userMessage = messages[userIndex];
     if (!userMessage || userMessage.role !== "user") return;
-
-    const history = conversation.messages
-      .slice(0, userIndex)
-      .slice(-12)
-      .map((message) => ({ role: message.role, content: message.text }));
-    const nextConversations = convs.map((entry) =>
-      entry.id === conversation.id
-        ? {
-            ...entry,
-            messages: entry.messages.filter(
-              (message) =>
-                !(message.role === "assistant" && message.retryUserMessageId === userMessageId),
-            ),
-            updatedAt: Date.now(),
-          }
-        : entry,
+    void requestReply(
+      userMessage.text,
+      activeId,
+      userMessage.id,
+      messages.slice(0, userIndex),
+      failedMessage.id,
     );
-    persist(nextConversations);
-    setActiveId(conversation.id);
-    setError("");
-    setTyping(true);
-    void submitToDioChat(userMessage.text, conversation.id, userMessageId, history);
   };
 
   const newChat = () => {
@@ -395,12 +403,14 @@ function Index() {
             id: transaction.id,
             accountId: transaction.accountId,
             date: transaction.date.slice(0, 10),
-            description: transaction.description ?? "Movimentação",
+            description: transaction.description?.trim() || "Movimentação",
             amount:
               accountTypes.get(transaction.accountId) === "CREDIT"
                 ? transaction.amount
                 : -transaction.amount,
-            category: transaction.category ?? "",
+            category:
+              transaction.category?.trim() ||
+              categorizeTransaction(transaction.description?.trim() || "Movimentação"),
             ...(transaction.currencyCode ? { currency: transaction.currencyCode } : {}),
           }));
         },
@@ -443,6 +453,7 @@ function Index() {
           </span>
           <div>
             <div className="nexora-brand-name">Nexora</div>
+            <div className="text-[10px] text-muted-foreground">Finance</div>
           </div>
           <Button
             className="ml-auto md:hidden"
@@ -596,19 +607,26 @@ function Index() {
             >
               <Menu />
             </Button>
+            <span className="truncate text-sm font-semibold text-foreground">Nexora Finance</span>
           </div>
           <div className="nexora-topbar-actions">
             <span className="nexora-status" role="status" aria-live="polite">
               <span className="nexora-status-dot" />
               {pluggyLoading
                 ? "Carregando suas informações…"
-                : pluggyConnected
-                  ? /sandbox|dados sintéticos/i.test(pluggyStatus ?? "")
-                    ? "Sandbox conectado"
-                    : "Conectado"
-                  : pluggyLoadError
-                    ? "Conexão indisponível"
-                    : "Ambiente de demonstração"}
+                : section === "chat"
+                  ? latestAssistant?.mode === "claude" || latestAssistant?.mode === "regras"
+                    ? "Integração ativa · Plaid Sandbox · dados fictícios"
+                    : latestAssistant?.mode === "demo"
+                      ? "Modo demonstração (dados locais)"
+                      : "Demonstração · Dados fictícios"
+                  : pluggyConnected
+                    ? /sandbox|dados sintéticos/i.test(pluggyStatus ?? "")
+                      ? "Sandbox conectado"
+                      : "Conectado"
+                    : pluggyLoadError
+                      ? "Conexão indisponível"
+                      : "Ambiente de demonstração"}
             </span>
             {!pluggyConnected && pluggyLoadError && (
               <span className="nexora-demo-inline">Ambiente de demonstração</span>
@@ -653,10 +671,10 @@ function Index() {
           ) : (
             <div className="nexora-chat-area">
               <div className="nexora-chat-intro">
-                <p className="nexora-eyebrow">NEXORA INTELLIGENCE</p>
-                <h1>Seu dinheiro, em contexto.</h1>
+                <p className="nexora-eyebrow">NEXORA FINANCE</p>
+                <h1>Dio, seu assistente financeiro.</h1>
                 <p className="nexora-subtitle">
-                  Faça perguntas e explore os temas financeiros disponíveis nesta experiência.
+                  Inteligência financeira em um só lugar. Faça perguntas sobre os dados disponíveis.
                 </p>
               </div>
               <div className="nexora-demo-banner">
@@ -682,7 +700,7 @@ function Index() {
                   </div>
                 )}
                 {messages.map((message) => (
-                  <ChatMessage key={message.id} msg={message} onRetry={retryChat} />
+                  <ChatMessage key={message.id} msg={message} onRetry={retryMessage} />
                 ))}
                 {typing && (
                   <div
@@ -690,11 +708,9 @@ function Index() {
                     role="status"
                   >
                     <LoaderCircle className="h-4 w-4 animate-spin" />{" "}
-                    {convs.some((conversation) =>
-                      conversation.messages.some((message) => message.responseStatus === "success"),
-                    )
-                      ? "Consultando os dados de teste…"
-                      : "Preparando os dados de teste…"}
+                    {preparingData
+                      ? "Preparando os dados de teste..."
+                      : "Consultando o assistente..."}
                   </div>
                 )}
                 <div ref={endRef} />
@@ -708,12 +724,12 @@ function Index() {
               >
                 <div className="flex items-end gap-2">
                   <textarea
-                    aria-label="Mensagem"
+                    aria-label="Mensagem para Dio"
                     ref={inputRef}
                     rows={2}
                     value={input}
+                    maxLength={MAX_CHAT_MESSAGE_LENGTH}
                     onChange={(event) => setInput(event.target.value)}
-                    maxLength={1000}
                     onKeyDown={(event) => {
                       if (
                         event.key === "Enter" &&
@@ -724,7 +740,7 @@ function Index() {
                         send(input);
                       }
                     }}
-                    placeholder="Pergunte sobre o exemplo financeiro…"
+                    placeholder="Pergunte algo ao Dio sobre os dados financeiros de teste…"
                   />
                   <Button
                     type="submit"
@@ -734,9 +750,11 @@ function Index() {
                     <SendHorizontal />
                   </Button>
                 </div>
-                <p className="mb-0 mt-1 flex justify-between gap-2 px-3 text-[10px] text-muted-foreground">
+                <p className="mb-0 mt-1 flex justify-between px-3 text-[10px] text-muted-foreground">
                   <span>Enter envia · Shift + Enter quebra a linha</span>
-                  <span>{input.length}/1.000</span>
+                  <span>
+                    {input.length}/{MAX_CHAT_MESSAGE_LENGTH}
+                  </span>
                 </p>
               </form>
             </div>

@@ -1,0 +1,121 @@
+id,date,description,amount,currency,label
+food-01,2026-10-01,Fresh Market Groceries,12.25,USD,Alimentação
+food-02,2026-10-02,Green Valley Supermarket,15.25,USD,Alimentação
+food-03,2026-10-03,Corner Cafe Coffee,18.25,USD,Alimentação
+food-04,2026-10-04,Sunrise Bakery,21.25,USD,Alimentação
+food-05,2026-10-05,Family Restaurant,24.25,USD,Alimentação
+food-06,2026-10-06,Central Market,27.25,USD,Alimentação
+food-07,2026-10-07,Daily Grocery Store,30.25,USD,Alimentação
+food-08,2026-10-08,Old Town Restaurant,33.25,USD,Alimentação
+food-09,2026-10-09,City Cafe,36.25,USD,Alimentação
+food-10,2026-10-10,Golden Bakery,39.25,USD,Alimentação
+food-11,2026-10-11,Neighborhood Supermarket,42.25,USD,Alimentação
+food-12,2026-10-12,Fresh Food Market,45.25,USD,Alimentação
+home-01,2026-10-01,Monthly Rent Payment,1000,USD,Moradia
+home-02,2026-10-02,Apartment Rent,1015,USD,Moradia
+home-03,2026-10-03,Electricity Bill,1030,USD,Moradia
+home-04,2026-10-04,Water Bill,1045,USD,Moradia
+home-05,2026-10-05,Home Mortgage,1060,USD,Moradia
+home-06,2026-10-06,Condo Housing Fee,1075,USD,Moradia
+home-07,2026-10-07,Energy Bill,1090,USD,Moradia
+home-08,2026-10-08,Aluguel Residencial,1105,USD,Moradia
+home-09,2026-10-09,Electric Utility Bill,1120,USD,Moradia
+home-10,2026-10-10,House Rent,1135,USD,Moradia
+home-11,2026-10-11,Residential Water Bill,1150,USD,Moradia
+home-12,2026-10-12,Monthly Housing Payment,1165,USD,Moradia
+transport-01,2026-10-01,Uber Ride,8.5,USD,Transporte
+transport-02,2026-10-02,Lyft Ride,10.5,USD,Transporte
+transport-03,2026-10-03,City Taxi,12.5,USD,Transporte
+transport-04,2026-10-04,Gas Station Fuel,14.5,USD,Transporte
+transport-05,2026-10-05,Airport Parking,16.5,USD,Transporte
+transport-06,2026-10-06,Metro Pass,18.5,USD,Transporte
+transport-07,2026-10-07,City Bus Pass,20.5,USD,Transporte
+transport-08,2026-10-08,Highway Toll,22.5,USD,Transporte
+transport-09,2026-10-09,Vehicle Fuel,24.5,USD,Transporte
+transport-10,2026-10-10,Parking Garage,26.5,USD,Transporte
+transport-11,2026-10-11,Uber Trip,28.5,USD,Transporte
+transport-12,2026-10-12,Local Taxi Ride,30.5,USD,Transporte
+health-01,2026-10-01,Community Pharmacy,10,USD,Saúde
+health-02,2026-10-02,Family Clinic,15,USD,Saúde
+health-03,2026-10-03,Dental Clinic,20,USD,Saúde
+health-04,2026-10-04,City Hospital,25,USD,Saúde
+health-05,2026-10-05,Medical Center,30,USD,Saúde
+health-06,2026-10-06,Health Services,35,USD,Saúde
+health-07,2026-10-07,Pharmacy Purchase,40,USD,Saúde
+health-08,2026-10-08,Local Dentist,45,USD,Saúde
+health-09,2026-10-09,Regional Hospital,50,USD,Saúde
+health-10,2026-10-10,Health Clinic,55,USD,Saúde
+health-11,2026-10-11,Medical Pharmacy,60,USD,Saúde
+health-12,2026-10-12,Community Health Center,65,USD,Saúde
+shopping-01,2026-10-01,Amazon Online Order,20,USD,Compras
+shopping-02,2026-10-02,Electronics Store,30,USD,Compras
+shopping-03,2026-10-03,Clothing Retail Shop,40,USD,Compras
+shopping-04,2026-10-04,Department Store Purchase,50,USD,Compras
+shopping-05,2026-10-05,Online Shopping Store,60,USD,Compras
+shopping-06,2026-10-06,Local Clothing Store,70,USD,Compras
+shopping-07,2026-10-07,Electronics Retailer,80,USD,Compras
+shopping-08,2026-10-08,Amazon Marketplace,90,USD,Compras
+shopping-09,2026-10-09,Department Store,100,USD,Compras
+shopping-10,2026-10-10,Online Ecommerce Shop,110,USD,Compras
+shopping-11,2026-10-11,City Retail Store,120,USD,Compras
+shopping-12,2026-10-12,Local Loja Purchase,130,USD,Compras
+leisure-01,2026-10-01,Cinema Tickets,15,USD,Lazer
+leisure-02,2026-10-02,Movie Theater,20,USD,Lazer
+leisure-03,2026-10-03,Concert Tickets,25,USD,Lazer
+leisure-04,2026-10-04,City Museum,30,USD,Lazer
+leisure-05,2026-10-05,Amusement Park,35,USD,Lazer
+leisure-06,2026-10-06,Netflix Subscription,40,USD,Lazer
+leisure-07,2026-10-07,Spotify Subscription,45,USD,Lazer
+leisure-08,2026-10-08,Live Music Show,50,USD,Lazer
+leisure-09,2026-10-09,Theater Tickets,55,USD,Lazer
+leisure-10,2026-10-10,Weekend Cinema,60,USD,Lazer
+leisure-11,2026-10-11,Leisure Center,65,USD,Lazer
+leisure-12,2026-10-12,Local Concert Show,70,USD,Lazer
+service-01,2026-10-01,Monthly Software Subscription,5,USD,Serviços
+service-02,2026-10-02,Home Internet Service,9,USD,Serviços
+service-03,2026-10-03,Mobile Phone Bill,13,USD,Serviços
+service-04,2026-10-04,Car Insurance Service,17,USD,Serviços
+service-05,2026-10-05,Cloud Software Plan,21,USD,Serviços
+service-06,2026-10-06,Business SaaS Subscription,25,USD,Serviços
+service-07,2026-10-07,Internet Provider Bill,29,USD,Serviços
+service-08,2026-10-08,Phone Service Plan,33,USD,Serviços
+service-09,2026-10-09,Annual Insurance Payment,37,USD,Serviços
+service-10,2026-10-10,Software Services Fee,41,USD,Serviços
+service-11,2026-10-11,Cloud Storage Subscription,45,USD,Serviços
+service-12,2026-10-12,Utility Service Payment,49,USD,Serviços
+income-01,2026-10-01,Monthly Salary Deposit,-1000,USD,Renda
+income-02,2026-10-02,Company Payroll,-1100,USD,Renda
+income-03,2026-10-03,Employment Income,-1200,USD,Renda
+income-04,2026-10-04,Quarterly Dividend,-1300,USD,Renda
+income-05,2026-10-05,Interest Payment,-1400,USD,Renda
+income-06,2026-10-06,Tax Refund,-1500,USD,Renda
+income-07,2026-10-07,Salary Payment,-1600,USD,Renda
+income-08,2026-10-08,Payroll Deposit,-1700,USD,Renda
+income-09,2026-10-09,Investment Dividend,-1800,USD,Renda
+income-10,2026-10-10,Monthly Income,-1900,USD,Renda
+income-11,2026-10-11,Salario Mensal,-2000,USD,Renda
+income-12,2026-10-12,Poupanca Rendimento,-2100,USD,Renda
+transfer-01,2026-10-01,Transfer to Savings,25,USD,Transferência
+transfer-02,2026-10-02,Internal Account Transfer,-30,USD,Transferência
+transfer-03,2026-10-03,Wire Transfer Payment,35,USD,Transferência
+transfer-04,2026-10-04,Pix Transfer Out,40,USD,Transferência
+transfer-05,2026-10-05,Zelle Transfer,-45,USD,Transferência
+transfer-06,2026-10-06,Transfer Between Accounts,50,USD,Transferência
+transfer-07,2026-10-07,Venmo Transfer Payment,55,USD,Transferência
+transfer-08,2026-10-08,Bank Transfer,-60,USD,Transferência
+transfer-09,2026-10-09,Transfer to Checking,65,USD,Transferência
+transfer-10,2026-10-10,Pix Transfer In,-70,USD,Transferência
+transfer-11,2026-10-11,Wire Transfer Out,75,USD,Transferência
+transfer-12,2026-10-12,Account Transfer,80,USD,Transferência
+other-01,2026-10-01,Unclassified Merchant 001,1,USD,Outros
+other-02,2026-10-02,Unclassified Merchant 002,4,USD,Outros
+other-03,2026-10-03,Unclassified Merchant 003,7,USD,Outros
+other-04,2026-10-04,Unclassified Merchant 004,10,USD,Outros
+other-05,2026-10-05,Unclassified Merchant 005,13,USD,Outros
+other-06,2026-10-06,Unclassified Merchant 006,16,USD,Outros
+other-07,2026-10-07,Unclassified Merchant 007,19,USD,Outros
+other-08,2026-10-08,Unclassified Merchant 008,22,USD,Outros
+other-09,2026-10-09,Unclassified Merchant 009,25,USD,Outros
+other-10,2026-10-10,Unclassified Merchant 010,28,USD,Outros
+other-11,2026-10-11,Unclassified Merchant 011,31,USD,Outros
+other-12,2026-10-12,Unclassified Merchant 012,34,USD,Outros

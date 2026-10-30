@@ -1,0 +1,244 @@
+{
+  "override_accounts": [
+    {
+      "type": "depository",
+      "subtype": "checking",
+      "starting_balance": 2450.75,
+      "meta": {
+        "name": "First Platypus Bank",
+        "official_name": "Personal Checking"
+      },
+      "numbers": {
+        "account": "000012345678",
+        "ach_routing": "021000021"
+      },
+      "transactions": [
+        {
+          "date_transacted": "2026-10-27",
+          "date_posted": "2026-10-28",
+          "amount": 42.18,
+          "description": "DEBIT CRD WHOLE FOODS 4821",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-10-24",
+          "date_posted": "2026-10-25",
+          "amount": -2650.00,
+          "description": "PAYROLL DEPOSIT ACME DESIGN",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-10-22",
+          "date_posted": "2026-10-23",
+          "amount": 68.40,
+          "description": "GROCERY TRADER JOES 1938",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-10-19",
+          "date_posted": "2026-10-20",
+          "amount": 54.75,
+          "description": "DEBIT CRD ELECTRIC COMPANY 7102",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-10-16",
+          "date_posted": "2026-10-17",
+          "amount": 18.99,
+          "description": "RECURRING NETFLIX 0021",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-10-12",
+          "date_posted": "2026-10-13",
+          "amount": 32.50,
+          "description": "DEBIT CRD UBER TRIP 8134",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-10-09",
+          "date_posted": "2026-10-10",
+          "amount": -2650.00,
+          "description": "PAYROLL DEPOSIT ACME DESIGN",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-10-05",
+          "date_posted": "2026-10-06",
+          "amount": 112.36,
+          "description": "GROCERY SAFEWAY 4410",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-09-29",
+          "date_posted": "2026-09-30",
+          "amount": 1425.00,
+          "description": "RENT PAYMENT MAPLE COURT",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-09-24",
+          "date_posted": "2026-09-25",
+          "amount": -2650.00,
+          "description": "PAYROLL DEPOSIT ACME DESIGN",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-09-20",
+          "date_posted": "2026-09-21",
+          "amount": 36.82,
+          "description": "GROCERY WHOLE FOODS 1932",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-09-16",
+          "date_posted": "2026-09-17",
+          "amount": 18.99,
+          "description": "RECURRING NETFLIX 0020",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-09-12",
+          "date_posted": "2026-09-13",
+          "amount": 27.40,
+          "description": "DEBIT CRD UBER TRIP 7741",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-09-08",
+          "date_posted": "2026-09-09",
+          "amount": 94.16,
+          "description": "GROCERY TRADER JOES 1834",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-09-03",
+          "date_posted": "2026-09-04",
+          "amount": -2650.00,
+          "description": "PAYROLL DEPOSIT ACME DESIGN",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-08-29",
+          "date_posted": "2026-08-30",
+          "amount": 1425.00,
+          "description": "RENT PAYMENT MAPLE COURT",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-08-23",
+          "date_posted": "2026-08-24",
+          "amount": 52.73,
+          "description": "GROCERY SAFEWAY 4075",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-08-18",
+          "date_posted": "2026-08-19",
+          "amount": 18.99,
+          "description": "RECURRING NETFLIX 0019",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-08-14",
+          "date_posted": "2026-08-15",
+          "amount": -2650.00,
+          "description": "PAYROLL DEPOSIT ACME DESIGN",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-08-10",
+          "date_posted": "2026-08-11",
+          "amount": 41.25,
+          "description": "DEBIT CRD UBER TRIP 6528",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-08-05",
+          "date_posted": "2026-08-06",
+          "amount": 76.31,
+          "description": "GROCERY WHOLE FOODS 1754",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-07-29",
+          "date_posted": "2026-07-30",
+          "amount": 1425.00,
+          "description": "RENT PAYMENT MAPLE COURT",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-07-23",
+          "date_posted": "2026-07-24",
+          "amount": -2650.00,
+          "description": "PAYROLL DEPOSIT ACME DESIGN",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-07-18",
+          "date_posted": "2026-07-19",
+          "amount": 18.99,
+          "description": "RECURRING NETFLIX 0018",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-07-13",
+          "date_posted": "2026-07-14",
+          "amount": 83.62,
+          "description": "GROCERY TRADER JOES 1722",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-07-08",
+          "date_posted": "2026-07-09",
+          "amount": 29.80,
+          "description": "DEBIT CRD UBER TRIP 5830",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-07-03",
+          "date_posted": "2026-07-04",
+          "amount": -2650.00,
+          "description": "PAYROLL DEPOSIT ACME DESIGN",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-06-25",
+          "date_posted": "2026-06-26",
+          "amount": 61.14,
+          "description": "GROCERY SAFEWAY 3862",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-06-14",
+          "date_posted": "2026-06-15",
+          "amount": 18.99,
+          "description": "RECURRING NETFLIX 0017",
+          "currency": "USD"
+        },
+        {
+          "date_transacted": "2026-05-22",
+          "date_posted": "2026-05-23",
+          "amount": -2650.00,
+          "description": "PAYROLL DEPOSIT ACME DESIGN",
+          "currency": "USD"
+        }
+      ],
+      "identity": {
+        "names": ["Alex Morgan"],
+        "addresses": [
+          {
+            "primary": true,
+            "data": {
+              "country": "US",
+              "city": "Austin",
+              "street": "100 Fictional Test Lane",
+              "postal_code": "78701",
+              "region": "TX"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

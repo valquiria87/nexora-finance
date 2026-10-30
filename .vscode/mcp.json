@@ -1,0 +1,19 @@
+{
+  "servers": {
+    "plaid": {
+      "type": "stdio",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/.vscode/start-plaid-mcp.ps1"
+      ]
+    },
+    "pluggy": {
+      "type": "http",
+      "url": "https://mcp.pluggy.ai/mcp"
+    }
+  }
+}

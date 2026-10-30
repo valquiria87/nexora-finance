@@ -132,9 +132,10 @@ export const isExpense = (t: DemoTransaction) => t.amount > 0;
 
 /** Transações mais recentes primeiro. */
 export function latestTransactions(txs: DemoTransaction[], n = 5): DemoTransaction[] {
+  const limit = Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 5;
   return [...txs]
     .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
-    .slice(0, n);
+    .slice(0, limit);
 }
 
 /** Soma apenas despesas (saídas) por categoria, em ordem decrescente. Entradas nunca entram. */
@@ -153,6 +154,74 @@ export function spendingByCategory(
       });
     }
   return [...m.values()].sort((a, b) => b.total - a.total);
+}
+
+export type SpendingInsight =
+  | {
+      type: "top-category";
+      category: string;
+      amount: number;
+      share: number;
+      currency?: string;
+    }
+  | {
+      type: "largest-expense";
+      description: string;
+      amount: number;
+      currency?: string;
+    }
+  | {
+      type: "average-expense";
+      amount: number;
+      count: number;
+      currency?: string;
+    };
+
+export function automaticSpendingInsights(txs: DemoTransaction[]): SpendingInsight[] {
+  const expensesByCurrency = new Map<string, DemoTransaction[]>();
+  for (const transaction of txs) {
+    if (!isExpense(transaction)) continue;
+    const key = transaction.currency ?? "";
+    const expenses = expensesByCurrency.get(key) ?? [];
+    expenses.push(transaction);
+    expensesByCurrency.set(key, expenses);
+  }
+
+  const insights: SpendingInsight[] = [];
+  for (const [currency, expenses] of expensesByCurrency) {
+    const total = expenses.reduce((sum, transaction) => sum + transaction.amount, 0);
+    const categories = spendingByCategory(expenses);
+    const topCategory = categories[0];
+    const largestExpense = expenses.reduce((largest, transaction) =>
+      transaction.amount > largest.amount ? transaction : largest,
+    );
+    const currencyField = currency ? { currency } : {};
+
+    if (topCategory) {
+      insights.push({
+        type: "top-category",
+        category: topCategory.category,
+        amount: topCategory.total,
+        share: topCategory.total / total,
+        ...currencyField,
+      });
+    }
+    insights.push({
+      type: "largest-expense",
+      description: largestExpense.description,
+      amount: largestExpense.amount,
+      ...currencyField,
+    });
+    if (expenses.length > 1) {
+      insights.push({
+        type: "average-expense",
+        amount: Math.round((total / expenses.length) * 100) / 100,
+        count: expenses.length,
+        ...currencyField,
+      });
+    }
+  }
+  return insights;
 }
 
 /** Origem dos dados do chat. Hoje só existe a demonstração; uma fonte real futura implementa a mesma interface. */
@@ -229,15 +298,28 @@ const CARD = /cartao|cartoes|credito/;
 /** Identifica a intenção. A ordem importa: perguntas mais específicas vêm antes. */
 export function detectIntent(question: string): Intent {
   const q = norm(question);
-  if (/resumo financeiro/.test(q)) return "summary";
-  if (CARD.test(q) && /\b(usar|uso|pagar|comprar|compra|compras)\b/.test(q)) return "card_purchase";
-  if (/credito disponivel/.test(q)) return "card_limit";
-  if (/dinheiro|saldo|quanto tenho/.test(q)) return "cash";
-  if (/divida|devo|devendo|fatura/.test(q)) return "card_debt";
-  if (/limite/.test(q)) return "card_limit";
-  if (/transac|movimenta|extrato|compra/.test(q)) return "transactions";
-  if (/categoria|gastei|gasto/.test(q)) return "categories";
-  if (/conta|cartao|cartoes|credito/.test(q)) return "accounts";
+  const hasSummary =
+    /(?:resumo|visao geral|visão geral|panorama|situacao|situação)/.test(q) &&
+    /(?:financeiro|financeira|sua situacao|sua situação|contas|geral)/.test(q);
+  if (hasSummary || /resumo financeiro/.test(q)) return "summary";
+  if (
+    CARD.test(q) &&
+    /\b(?:usar|uso|pagar|comprar|compra|compras|gastar|gasto|fazer compras)\b/.test(q)
+  )
+    return "card_purchase";
+
+  const cashLike = /(?:dinheiro|saldo|quanto tenho)/.test(q);
+  const limitLike = /(?:credito disponivel|limite|limite total)/.test(q);
+  const ignoreLimit = /(?:sem contar|sem incluir|fora|ignorar|nao contar)/.test(q) && limitLike;
+
+  if (cashLike && (!limitLike || ignoreLimit)) return "cash";
+  if (cashLike && /(?:dinheiro|saldo)/.test(q) && !/(?:credito disponivel|limite)/.test(q))
+    return "cash";
+  if (limitLike && !(/(?:dinheiro|saldo)/.test(q) && !ignoreLimit)) return "card_limit";
+  if (/(?:divida|devo|devendo|fatura)/.test(q)) return "card_debt";
+  if (/(?:transac|movimenta|extrato|ultimas|recentes|compras)/.test(q)) return "transactions";
+  if (/(?:categoria|categorias|gastei|gasto|despesa|despesas)/.test(q)) return "categories";
+  if (/(?:conta|contas|cartao|cartoes|credito)/.test(q)) return "accounts";
   return "unknown";
 }
 
@@ -254,8 +336,13 @@ export function answer(
 
   switch (detectIntent(question)) {
     case "summary": {
-      if (!accounts.length && !txs.length)
-        return "Não há dados financeiros disponíveis nesta demonstração." + DEMO_NOTE;
+      if (!accounts.length) {
+        if (!txs.length)
+          return "Não há dados financeiros disponíveis nesta demonstração." + DEMO_NOTE;
+        return (
+          "Não há contas disponíveis nos dados de demonstração para compor um resumo." + DEMO_NOTE
+        );
+      }
       const spending = spendingByCategory(txs).reduce((sum, c) => sum + c.total, 0);
       return (
         `**Resumo financeiro da demonstração**\n\n- **Contas de exemplo**: ${accounts.length}\n- **Dinheiro bancário disponível**: ${cash}\n- **Dívida dos cartões**: ${formatBRL(totalCardDebt(accounts))}\n- **Movimentações**: ${txs.length}\n- **Despesas registradas**: ${formatBRL(spending)}\n\nO dinheiro disponível considera apenas contas corrente e poupança. Dívidas e limites de cartão ficam separados. As movimentações são um recorte demonstrativo, não um extrato completo para reconciliar os saldos.` +
@@ -263,6 +350,7 @@ export function answer(
       );
     }
     case "card_purchase": {
+      if (!cards.length) return "Não há cartões de crédito nos dados de demonstração." + DEMO_NOTE;
       const lines = cards.map(
         (a) =>
           `- **${a.name}**: dívida atual ${fmtOpt(a.debt)}; limite total não informado; crédito disponível ${fmtOpt(a.availableCredit)}`,
@@ -280,6 +368,11 @@ export function answer(
       );
     }
     case "cash": {
+      if (!bank.length)
+        return (
+          "Não há contas bancárias nos dados de demonstração para somar o saldo disponível." +
+          DEMO_NOTE
+        );
       const lines = bank.map(
         (a) =>
           `- **${a.name}**: disponível ${fmtOpt(a.available)} (saldo da conta ${fmtOpt(a.balance)})`,
@@ -291,6 +384,10 @@ export function answer(
       );
     }
     case "card_debt": {
+      if (!cards.length)
+        return (
+          "Não há cartões de crédito nos dados de demonstração para somar dívidas." + DEMO_NOTE
+        );
       const lines = cards.map((a) => `- **${a.name}**: dívida atual ${fmtOpt(a.debt)}`);
       return (
         `A dívida atual dos cartões de exemplo soma **${formatBRL(totalCardDebt(accounts))}**:\n\n${lines.join("\n")}\n\n` +
@@ -299,6 +396,10 @@ export function answer(
       );
     }
     case "card_limit": {
+      if (!cards.length)
+        return (
+          "Não há cartões de crédito nos dados de demonstração para informar limite." + DEMO_NOTE
+        );
       const lines = cards.map(
         (a) =>
           `- **${a.name}**: limite total não informado; crédito disponível ${fmtOpt(a.availableCredit)}`,

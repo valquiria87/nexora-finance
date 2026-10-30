@@ -8,13 +8,16 @@ import {
   formatBRL,
   totalAvailableCash,
   DEMO_ACCOUNTS,
+  SUGGESTIONS,
 } from "@/lib/finance";
 
 describe("regras financeiras", () => {
-  it("as três sugestões consultam as intenções correspondentes", () => {
+  it("as cinco sugestões permanecem disponíveis e incluem as principais intenções", () => {
+    expect(SUGGESTIONS).toHaveLength(5);
     expect(detectIntent("Resuma minhas contas")).toBe("accounts");
     expect(detectIntent("Quais foram minhas movimentações?")).toBe("transactions");
     expect(detectIntent("Mostre um resumo financeiro")).toBe("summary");
+    expect(detectIntent("Qual é o resumo da minha situação financeira?")).toBe("summary");
   });
   it("o resumo separa dinheiro bancário, dívida e despesas", () => {
     const result = answer("Mostre um resumo financeiro");
@@ -26,6 +29,9 @@ describe("regras financeiras", () => {
   it("contas e resumo vazios não inventam dados", () => {
     expect(answer("Resuma minhas contas", [], [])).toContain("Não há contas");
     expect(answer("Mostre um resumo financeiro", [], [])).toContain("Não há dados financeiros");
+    expect(answer("Qual é o resumo da minha situação financeira?", [], [])).toContain(
+      "Não há dados financeiros",
+    );
   });
   it("formata em R$ com vírgula decimal", () => {
     expect(formatBRL(110)).toBe("R$ 110,00");

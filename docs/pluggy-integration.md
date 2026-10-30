@@ -1,4 +1,4 @@
-# Pluggy integration status
+# Nexora Finance — status da integração Pluggy
 
 The TanStack Start server issues Connect Tokens, hosts the official `react-pluggy-connect` widget, binds the returned Item to a signed, browser-scoped owner ID, and reads the Item, accounts, and up to 5,000 transactions per account over the last 12 months. Transaction reads use Pluggy's cursor endpoint (`GET /v2/transactions`). Account and transaction responses stay server-side until normalized into the dashboard's existing data-provider interface. Deleting the connection calls `DELETE /items/{id}`, which revokes consent and removes Pluggy's stored Item data.
 
