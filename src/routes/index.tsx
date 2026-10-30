@@ -159,10 +159,10 @@ function Index() {
         setConvs(saved);
       else
         setError(
-          "NÃ£o foi possÃ­vel recuperar o histÃ³rico. VocÃª pode iniciar uma nova conversa.",
+          "Não foi possível recuperar o histórico. Você pode iniciar uma nova conversa.",
         );
     } catch {
-      setError("NÃ£o foi possÃ­vel recuperar o histÃ³rico. VocÃª pode iniciar uma nova conversa.");
+      setError("Não foi possível recuperar o histórico. Você pode iniciar uma nova conversa.");
     }
     inputRef.current?.focus();
   }, []);
@@ -172,7 +172,7 @@ function Index() {
       localStorage.setItem(KEY, JSON.stringify(next));
     } catch {
       setError(
-        "O histÃ³rico nÃ£o pÃ´de ser salvo neste navegador. A conversa continua disponÃ­vel nesta sessÃ£o.",
+        "O histórico não pôde ser salvo neste navegador. A conversa continua disponível nesta sessão.",
       );
     }
   };
@@ -200,7 +200,7 @@ function Index() {
       };
 
       if (!response.ok || !data.accessToken) {
-        throw new Error(data.error ?? "NÃ£o foi possÃ­vel iniciar a conexÃ£o bancÃ¡ria.");
+        throw new Error(data.error ?? "Não foi possível iniciar a conexão bancária.");
       }
 
       const { PluggyConnect } = await import("react-pluggy-connect");
@@ -219,7 +219,7 @@ function Index() {
       setError(
         cause instanceof Error && cause.message
           ? cause.message
-          : "Erro inesperado ao iniciar conexÃ£o Pluggy.",
+          : "Erro inesperado ao iniciar conexão Pluggy.",
       );
     } finally {
       setConnecting(false);
