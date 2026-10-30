@@ -155,10 +155,11 @@ function Index() {
                 (m.role === "user" || m.role === "assistant"),
             ),
         )
-      )
+      ) {
         setConvs(saved);
-      else
+      } else {
         setError("Não foi possível recuperar o histórico. Você pode iniciar uma nova conversa.");
+      }
     } catch {
       setError("Não foi possível recuperar o histórico. Você pode iniciar uma nova conversa.");
     }
