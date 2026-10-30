@@ -66,7 +66,9 @@ export async function askDioChat(
       throw new Error("A consulta demorou mais de 60 segundos. Você pode tentar novamente.");
     }
     if (error instanceof TypeError) {
-      throw new Error("Não foi possível alcançar o servidor. Verifique a conexão e tente novamente.");
+      throw new Error(
+        "Não foi possível alcançar o servidor. Verifique a conexão e tente novamente.",
+      );
     }
     throw error instanceof Error
       ? error
