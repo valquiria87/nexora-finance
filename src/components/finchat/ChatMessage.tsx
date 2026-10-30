@@ -150,7 +150,7 @@ export function ChatMessage({ msg, onRetry }: { msg: Msg; onRetry?: (userMessage
         {msg.responseStatus === "success" && (
           <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px]">
             <span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 font-medium text-primary">
-              Integração ativa · Plaid Sandbox · dados fictícios
+              Assistente conectado · Supabase Edge Function · dio-chat
             </span>
             <span className="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
               {msg.mode === "claude" ? "Respostas com IA" : "Respostas por regras"}
