@@ -101,6 +101,10 @@ No Windows, a configuração STDIO chama `.vscode/start-plaid-mcp.ps1`. O launch
 
 Não versionar nem compartilhar `.env.plaid`, Client ID, secret, access token ou capturas com credenciais. O teste automatizado verifica a configuração, mas não inicia o servidor nem chama a Plaid.
 
+### Evidência de execução Plaid Sandbox
+
+A consulta manual pelo MCP foi realizada e registrada em [`docs/evidencias/P07-RESULTADO.md`](./docs/evidencias/P07-RESULTADO.md). O relatório registra 5 transações em USD no período de 28/06/2026 a 25/09/2026, paginação concluída em uma página e três observações agregadas: status por moeda, soma algébrica e maior movimento absoluto. Houve uma resposta inicial `PRODUCT_NOT_READY`; a nova tentativa foi concluída com sucesso. O relatório omite estabelecimentos, transações individuais e identificadores sensíveis. As capturas de tela devem permanecer sem chaves, tokens ou dados sensíveis.
+
 O código do app em `src/lib/plaid/` contém mapeadores e paginação puros, não um servidor MCP. Seus testes são offline. O CI não autentica em serviços externos nem executa chamadas MCP.
 
 ## Segurança e privacidade
