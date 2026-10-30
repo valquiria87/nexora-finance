@@ -1,35 +1,73 @@
-# Nexora Finance — Open Finance e inteligência financeira
+# Nexora Finance — Open Finance e assistente financeiro
 
-AplicaÃ§Ã£o web desenvolvida como entrega do desafio DIO Bradesco. O Nexora Finance demonstra como uma interface conversacional pode apresentar informaÃ§Ãµes financeiras de forma clara, com regras que mantÃªm saldo bancÃ¡rio, dÃ­vida de cartÃ£o e crÃ©dito disponÃ­vel separados.
+Projeto desenvolvido para o desafio de Open Finance da DIO, com uma interface financeira responsiva, painel de contas e transações, conexão bancária por meio da Pluggy e assistente conversacional em português.
 
-> **Modos de dados:** sem conexÃ£o Pluggy, o app usa explicitamente a demonstraÃ§Ã£o local fictÃ­cia. Com uma conexÃ£o, o painel carrega contas e transaÃ§Ãµes retornadas pela Pluggy; as conexÃµes Sandbox usam dados sintÃ©ticos.
+> **Aviso:** este projeto é educacional. O modo de demonstração utiliza dados fictícios. Conexões Pluggy Sandbox também retornam dados sintéticos. Não utilize os dados exibidos para decisões financeiras reais.
 
-## Objetivo e cenÃ¡rio de uso
+## Funcionalidades
 
-A pessoa usuÃ¡ria pode explorar um painel financeiro de exemplo e fazer perguntas em portuguÃªs sobre contas, dinheiro disponÃ­vel, dÃ­vida e crÃ©dito de cartÃµes, movimentaÃ§Ãµes, gastos por categoria e resumo financeiro. O projeto Ã© uma demonstraÃ§Ã£o educacional de interface e lÃ³gica de negÃ³cio; nÃ£o deve ser usado para consultar ou tomar decisÃµes sobre finanÃ§as reais.
+- Painel financeiro com visão de contas, saldos disponíveis, dívidas de cartão, transações e gastos por categoria.
+- Conexão com instituições por meio do widget oficial Pluggy Connect.
+- Consultas à API Pluggy realizadas no servidor; credenciais e identificadores de conexão não são usados como autorização no navegador.
+- Modo de demonstração local, sem necessidade de credenciais, para permitir explorar a interface.
+- Chat em português, com histórico local de conversas, sugestões, estado de carregamento, tratamento de falhas e nova tentativa.
+- Integração do chat com a Supabase Edge Function \`dio-chat\`, por meio de uma rota server-side.
+- Regras financeiras que mantêm dinheiro em contas, dívida de cartão e crédito disponível em campos separados.
 
-## AplicaÃ§Ã£o publicada
+## Arquitetura
 
-[https://pocketwise-finance-chat.lovable.app](https://pocketwise-finance-chat.lovable.app)
+\`\`\`text
+Navegador
+  ├── Painel / Pluggy Connect
+  │     └── Rotas server-side /api/pluggy-*
+  │           └── API Pluggy
+  │
+  └── Chat
+        └── POST /api/dio-chat
+              └── Supabase Edge Function: dio-chat
+                    └── resposta do assistente
+\`\`\`
 
-## Funcionalidades atuais
+### Chat e Supabase
 
-- Chat em portuguÃªs com sugestÃµes de perguntas e respostas para intenÃ§Ãµes previstas no cÃ³digo.
-- Painel com saldo disponÃ­vel, dÃ­vida de cartÃµes, gastos por categoria, contas de exemplo e movimentaÃ§Ãµes recentes.
-- HistÃ³rico de conversas e criaÃ§Ã£o de novas conversas, armazenados no `localStorage` do navegador.
-- Tratamento de perguntas sem resposta disponÃ­vel e aviso de que as respostas usam dados simulados.
-- Layout responsivo para telas menores.
-- Regras para nÃ£o somar dÃ­vida ou limite de cartÃ£o ao dinheiro disponÃ­vel. O saldo disponÃ­vel considera apenas contas corrente e poupanÃ§a.
+O navegador envia a pergunta para \`POST /api/dio-chat\`. A rota valida a mensagem e o histórico, limita o histórico às 12 mensagens mais recentes e chama a função publicada no Supabase:
 
-### Limites da demonstraÃ§Ã£o
+\`\`\`ts
+supabase.functions.invoke("dio-chat", {
+  body: { mensagem, historico },
+});
+\`\`\`
 
-O chat usa correspondÃªncia de padrÃµes e regras locais; nÃ£o Ã© um modelo de linguagem conectado a uma API. Responde somente Ã s intenÃ§Ãµes codificadas. As quatro contas e oito movimentaÃ§Ãµes sÃ£o exemplos estÃ¡ticos apresentados em reais (BRL). As movimentaÃ§Ãµes sÃ£o um recorte ilustrativo de outubro de 2026, nÃ£o um extrato completo nem uma base para reconciliar saldos. NÃ£o hÃ¡ login, banco de dados, sincronizaÃ§Ã£o, conexÃ£o bancÃ¡ria ou dados pessoais reais. O histÃ³rico fica apenas no armazenamento local do navegador.
+O payload contém \`mensagem\` e \`historico\`, sendo cada item do histórico formado por \`{ role: "user" | "assistant", content: string }\`. A interface espera uma resposta com \`resposta\`, \`modo\` e \`meta\` (período, quantidade de registros e fonte).
 
-## Dados e regras financeiras
+A implementação da rota e do cliente server-side está versionada em:
+- \`src/routes/api.dio-chat.ts\`
+- \`src/lib/dio-chat.server.ts\`
+- \`src/lib/dio-chat.service.ts\`
 
-No modo de demonstraÃ§Ã£o, os dados vÃªm de `DEMO_ACCOUNTS` e `DEMO_TRANSACTIONS` em `src/lib/finance.ts`, por meio do `demoProvider`. Com conexÃ£o Pluggy, o dashboard consome contas e transaÃ§Ãµes do backend. As contas de exemplo sÃ£o Plaid Checking, Plaid Saving, Plaid Credit Card e Plaid Business Credit Card; os nomes Plaid sÃ£o rÃ³tulos fictÃ­cios, nÃ£o evidÃªncia de conexÃ£o com o Plaid.
+**Importante:** o código-fonte da Edge Function \`dio-chat\` permanece no projeto Supabase e não está armazenado neste repositório. Este repositório documenta e implementa a chamada feita pela aplicação; não afirma que o código remoto da função ou a execução interna de ferramentas MCP foi auditada aqui. Para reproduzir integralmente o backend, a função também precisa ser versionada em um repositório ou exportada como artefato, sem incluir segredos.
 
-As movimentaÃ§Ãµes usam a convenÃ§Ã£o implementada no projeto: valor positivo representa despesa/saÃ­da e valor negativo representa entrada. O painel e as respostas calculam gastos usando somente despesas. As transaÃ§Ãµes nÃ£o atualizam nem determinam os saldos das contas. Valores ausentes, como limite total de cartÃ£o, sÃ£o apresentados como nÃ£o informados em vez de estimados.
+### Pluggy
+
+A aplicação usa o servidor TanStack Start para criar Connect Tokens, receber o resultado do widget Pluggy Connect e consultar contas e transações no servidor. O vínculo da conexão é mantido por cookie assinado, \`HttpOnly\`, com identidade de demonstração por navegador.
+
+O fluxo atual não é um sistema de autenticação multiusuário nem uma implementação de produção. A documentação técnica e as limitações estão em [docs/pluggy-integration.md](docs/pluggy-integration.md).
+
+### MCP: distinção importante
+
+O Pluggy Docs MCP é um servidor remoto para consultar a documentação da Pluggy. Ele não equivale, por si só, a um servidor MCP que disponibiliza dados financeiros da pessoa usuária. A pesquisa conceitual sobre o objeto Item está em [docs/pluggy-mcp-item.md](docs/pluggy-mcp-item.md).
+
+A existência de um MCP financeiro e a execução de ferramentas MCP dentro da Edge Function \`dio-chat\` não podem ser comprovadas somente pelo código deste repositório, pois a implementação remota da função não está versionada aqui. Não descreva essa parte como testada sem anexar o código ou evidências da execução.
+
+## Regras e dados financeiros
+
+- Sem conexão Pluggy ativa, o painel usa \`DEMO_ACCOUNTS\` e \`DEMO_TRANSACTIONS\` de \`src/lib/finance.ts\`.
+- Os dados de demonstração são fictícios e não representam um extrato bancário completo.
+- O saldo disponível considera apenas contas corrente e poupança.
+- Dívidas e limites de cartão não são somados ao dinheiro disponível.
+- Valor positivo em uma transação representa saída/despesa; valor negativo representa entrada.
+- As transações são uma amostra ilustrativa e não reconciliam nem recalculam o saldo das contas.
+- Valores ausentes são exibidos como não informados, sem estimativas.
 
 ## Tecnologias
 
@@ -37,117 +75,75 @@ As movimentaÃ§Ãµes usam a convenÃ§Ã£o implementada no projeto: valor pos
 - TanStack Start e TanStack Router
 - Vite
 - Tailwind CSS v4
-- Vitest, Testing Library e jsdom para testes
-- Bun para instalaÃ§Ã£o e execuÃ§Ã£o conforme o `bun.lock`
-- Lucide React para Ã­cones
+- Supabase JavaScript Client
+- Pluggy Connect e API Pluggy
+- Vitest, Testing Library e jsdom
+- Bun
+- Lucide React e Recharts
 
-## Arquitetura atual
-
-| Arquivo                                                | Responsabilidade                                                                                                                                                                |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/routes/index.tsx`                                 | Tela do chat, estado da conversa, histÃ³rico no navegador e alternÃ¢ncia entre chat e painel. Chama `answer()` para responder.                                                  |
-| `src/components/finchat/ChatMessage.tsx`               | ApresentaÃ§Ã£o de mensagens.                                                                                                                                                    |
-| `src/components/finchat/Dashboard.tsx`                 | Painel de contas e movimentaÃ§Ãµes; usa `demoProvider` e os helpers financeiros compartilhados.                                                                                 |
-| `src/lib/finance.ts`                                   | Dados locais, `demoProvider`, cÃ¡lculos, identificaÃ§Ã£o de intenÃ§Ã£o e funÃ§Ã£o `answer()` para o chat de demonstraÃ§Ã£o.                                                     |
-| `src/lib/plaid/types.ts`, `mappers.ts`, `sync.ts`      | Tipos, mapeadores puros e lÃ³gica de paginaÃ§Ã£o preparatÃ³ria para Plaid. NÃ£o realizam requisiÃ§Ãµes de rede nem alimentam a interface atual.                                 |
-| `src/lib/plaid/config.server.ts`, `plaid.functions.ts` | Leitura server-side da presenÃ§a de variÃ¡veis de configuraÃ§Ã£o e indicaÃ§Ã£o de que a integraÃ§Ã£o nÃ£o foi implementada. NÃ£o expÃµem os segredos nem chamam a API do Plaid. |
-| `src/test/`                                            | Testes de lÃ³gica financeira, mapeadores/paginaÃ§Ã£o Plaid, painel e rota inicial.                                                                                              |
-
-O dashboard mantÃ©m o provedor de demonstraÃ§Ã£o como fallback e usa o backend Pluggy quando uma conexÃ£o da sessÃ£o estÃ¡ ativa. O `localStorage` guarda o histÃ³rico de conversas; o vÃ­nculo Pluggy Ã© mantido em cookie assinado `HttpOnly` e consultado somente pelo servidor. Consulte [docs/pluggy-integration.md](./docs/pluggy-integration.md) para configuraÃ§Ã£o, limitaÃ§Ãµes de seguranÃ§a e estado do MCP.
-
-## Instalar e executar localmente
+## Executar localmente
 
 Requisito: [Bun](https://bun.sh).
 
-```bash
+\`\`\`bash
 bun install
 bun run dev
-```
+\`\`\`
 
-O servidor de desenvolvimento informa no terminal o endereÃ§o local. Para executar os testes existentes:
+Para executar os testes, lint e build:
 
-```bash
+\`\`\`bash
 bun run test
-```
-
-Para gerar e visualizar a build de produÃ§Ã£o:
-
-```bash
+bun run lint
 bun run build
-bun run preview
-```
+\`\`\`
 
-A demonstraÃ§Ã£o nÃ£o exige credenciais nem variÃ¡veis de ambiente.
+A demonstração local pode ser aberta sem credenciais. Para testar a conexão Pluggy e o chat conectado, configure as variáveis server-side descritas em [\`.env.example\`](.env.example). Nunca coloque credenciais em variáveis \`VITE_*\`, no código do navegador, em capturas de tela ou no Git.
 
-## Testes
+## Variáveis de ambiente
 
-Os testes automatizados existentes estÃ£o em `src/test/` e sÃ£o executados com Vitest pelo comando `bun run test`. A execuÃ§Ã£o validada nesta revisÃ£o aprovou 45 testes em 4 arquivos.
+Copie \`.env.example\` para \`.env\` e preencha somente no ambiente local ou no provedor de hospedagem:
 
-## EvidÃªncias
+| Variável | Uso |
+| --- | --- |
+| \`PLUGGY_CLIENT_ID\` / \`PLUGGY_CLIENT_SECRET\` | Credenciais da API Pluggy, somente no servidor |
+| \`FINCHAT_SESSION_SECRET\` | Assinatura dos cookies de sessão de demonstração |
+| \`SUPABASE_URL\` / \`SUPABASE_SERVICE_ROLE_KEY\` | Cliente server-side usado para invocar a Edge Function |
+| \`DIO_CHAT_SUPABASE_URL\` / \`DIO_CHAT_SUPABASE_SERVICE_ROLE_KEY\` | Opcionais, apenas se \`dio-chat\` estiver em outro projeto Supabase |
+| \`PLUGGY_WEBHOOK_SECRET\` | Segredo para validar notificações de webhook, se configurado |
 
-Os dois PDFs registram resultados e instruÃ§Ãµes do laboratÃ³rio MCP. Esse registro documental nÃ£o equivale a capturas brutas das chamadas, e os dados do laboratÃ³rio nÃ£o sÃ£o os dados usados pelo aplicativo.
+A chave \`service_role\` concede privilégios elevados. Ela deve permanecer exclusivamente no servidor e nunca ser exposta ao navegador. Não envie valores dessas variáveis por chat ou documentação.
 
-### LaboratÃ³rio MCP documentado nos PDFs
+## Testes e integração contínua
 
-O laboratÃ³rio descrito a seguir Ã© separado do Nexora Finance publicado. A aplicaÃ§Ã£o continua usando exclusivamente a demonstraÃ§Ã£o local explicada neste README.
+Os testes automatizados ficam em \`src/test/\` e são executados com Vitest. O workflow do GitHub Actions executa testes, lint e build em pushes e pull requests para \`main\`.
 
-#### Pluggy Docs MCP
+A aprovação do workflow valida o código versionado. Ela não substitui um teste funcional com a Edge Function publicada, uma conexão Pluggy Sandbox ou uma sessão MCP real.
 
-O Guia do Instrutor (p. 6) orienta adicionar um servidor MCP remoto chamado `pluggy`, do tipo **Streamable HTTP**, com a URL `https://mcp.pluggy.ai/mcp` e sem autenticaÃ§Ã£o. Depois de salvar, reinicie o Codex se necessÃ¡rio e confira `/mcp` numa conversa nova. O servidor Ã© usado para consultar documentaÃ§Ã£o da Pluggy; nÃ£o acessa contas bancÃ¡rias.
+## Evidências para a entrega
 
-O Guia registra que, apÃ³s reiniciar o Codex, o servidor respondeu. P01 retornou quatro operaÃ§Ãµes de transaÃ§Ã£o depois de corrigir o filtro de grupo para `Transaction`; P02 foi usado para explicar conceitos com fontes; P03 foi executado. P04 Ã© um aprofundamento opcional e nÃ£o deve executar consulta de dados (p. 7â€“10). Esses sÃ£o resultados relatados no Guia, nÃ£o uma transcriÃ§Ã£o bruta anexada ao repositÃ³rio.
+Antes de apresentar o desafio, reúna evidências próprias e sem credenciais visíveis:
 
-#### Plaid Sandbox MCP
+1. Tela do painel em modo de demonstração, com o aviso de dados fictícios.
+2. Conexão Pluggy Sandbox concluída e dados sintéticos carregados, se esse fluxo fizer parte da demonstração.
+3. Conversa real com a Edge Function \`dio-chat\`, incluindo uma pergunta sobre contas ou transações.
+4. Evidência da execução das ferramentas MCP exigidas pelo enunciado, mostrando nome da ferramenta, parâmetros não sensíveis e resultado.
+5. Capturas da interface em desktop e celular.
 
-O Guia (p. 13â€“16) orienta instalar `uv`, localizar o executÃ¡vel `uvx` e adicionar um servidor **STDIO** chamado `plaid`. No Mac do instrutor, a instalaÃ§Ã£o registrada foi `brew install uv`; em outros sistemas, siga as instruÃ§Ãµes oficiais de instalaÃ§Ã£o do [`uv`](https://docs.astral.sh/uv/getting-started/installation/). Use `uvx` como comando se estiver disponÃ­vel no `PATH` do processo do Codex; caso contrÃ¡rio, informe o caminho completo do executÃ¡vel local. O argumento deve ser `mcp-server-plaid`. Configure localmente as variÃ¡veis `PLAID_CLIENT_ID` e `PLAID_SECRET` nos campos de ambiente do servidor; nÃ£o inclua seus valores neste README, em prompts, capturas ou no frontend. Salve e reinicie o Codex, depois confirme o servidor com `/mcp`.
+Não use números do laboratório, exemplos do professor ou dados fictícios como se fossem resultados de uma conta real. Não inclua tokens, chaves, cookies, identificadores privados ou dados pessoais.
 
-P05 Ã© a verificaÃ§Ã£o documental do servidor. P06 registra a criaÃ§Ã£o de um Item padrÃ£o com o produto `transactions`, sem webhook, e a obtenÃ§Ã£o de um token. O Guia deixa **pendente** a confirmaÃ§Ã£o de que a instituiÃ§Ã£o desse Item foi `First Platypus Bank` (`ins_109508`); portanto, este README nÃ£o afirma que foi. P07 Ã© descrito como consulta de leitura ao Sandbox, usando `/accounts/get` e `/transactions/get`, com paginaÃ§Ã£o `count`/`offset`/`total_transactions` e perÃ­odo de 90 dias. O Guia relata uma primeira falha de rede e uma tentativa posterior bem-sucedida; isso nÃ£o significa que o aplicativo tenha executado essas chamadas (p. 16â€“23).
+## Estado e limites conhecidos
 
-#### Registro complementar da execuÃ§Ã£o P07
+- A chamada da aplicação para a Edge Function \`dio-chat\` está implementada nesta branch.
+- O código-fonte da Edge Function publicada não está incluído neste repositório.
+- O painel Pluggy é executado por rotas server-side e pode operar com Sandbox; Sandbox contém dados sintéticos.
+- O Pluggy Docs MCP é documentação, não prova de acesso a dados financeiros via MCP.
+- A sessão Pluggy atual é uma identidade de demonstração por navegador, não autenticação multiusuário.
+- A validação final da integração remota exige teste funcional no ambiente Supabase/Pluggy e evidências da execução MCP.
 
-O [relatÃ³rio P07](./docs/evidencias/P07-RESULTADO.md) registra uma consulta de 28/06/2026 a 25/09/2026 com cinco transaÃ§Ãµes em USD, retornadas em uma pÃ¡gina. ApÃ³s uma tentativa com `PRODUCT_NOT_READY`, a nova tentativa teve sucesso. Os resultados agregados foram: USD com 0 transaÃ§Ãµes pendentes e 5 confirmadas, soma algÃ©brica de US$ 163,57 e maior movimento absoluto de US$ 111,47. Este registro Ã© uma evidÃªncia histÃ³rica da integraÃ§Ã£o original, distinta dos dados demonstrativos em reais (BRL) usados na interface atual. TambÃ©m Ã© distinto dos nÃºmeros histÃ³ricos do Guia (14 contas e 48 transaÃ§Ãµes); nÃ£o representa uma saÃ­da bruta da API e nÃ£o comprova as tabelas originais dos trÃªs padrÃµes de gastos.
+## Referências
 
-#### Resultados histÃ³ricos relatados pelo Guia
-
-O Guia registra uma consulta de **28/06/2026 a 25/09/2026**: **14 contas**, **48 transaÃ§Ãµes confirmadas** e **0 pendentes**. Informa entradas confirmadas de **US$ 1.512,66** e saÃ­das confirmadas de **US$ 33.448,38**. Na Plaid, o sinal positivo representa saÃ­da e o negativo, entrada. Esses nÃºmeros sÃ£o resultados documentados do laboratÃ³rio Sandbox; nÃ£o sÃ£o os quatro registros de contas nem as oito transaÃ§Ãµes fictÃ­cias locais do aplicativo (p. 20â€“21).
-
-O Guia tambÃ©m registra trÃªs observaÃ§Ãµes sobre aquele conjunto: seis transferÃªncias de saÃ­da somando **US$ 20.550,00**; nove registros de alimentaÃ§Ã£o e bebidas somando **US$ 1.548,99**; e seis transaÃ§Ãµes identificadas como Uber somando **US$ 35,19**. O prÃ³prio Guia alerta que transferÃªncias podem ser movimentaÃ§Ãµes entre contas, nÃ£o consumo, e que os dados sÃ£o fictÃ­cios (p. 21â€“22). O aplicativo atual calcula gastos por categoria sobre sua prÃ³pria amostra local e nÃ£o produz essas trÃªs observaÃ§Ãµes do Sandbox.
-
-### Resumo da especificaÃ§Ã£o do chat no Lovable
-
-O Guia (p. 25â€“28) contÃ©m uma especificaÃ§Ã£o de chat em portuguÃªs, responsivo, com indicaÃ§Ã£o de demonstraÃ§Ã£o fictÃ­cia, sugestÃµes clicÃ¡veis, envio por botÃ£o/Enter e quebra de linha com Shift+Enter, carregamento, erros compreensÃ­veis, histÃ³rico, contas, saldos, transaÃ§Ãµes, categorias e respostas limitadas aos dados disponÃ­veis. Define uma Etapa 1 funcional com dados locais fictÃ­cios e uma Etapa 2 futura com backend Plaid Sandbox e segredos apenas no servidor. TambÃ©m inclui P09 para revisar a prÃ©via em desktop e celular.
-
-Este parÃ¡grafo Ã© um **resumo da especificaÃ§Ã£o incluÃ­da no Guia**, nÃ£o uma transcriÃ§Ã£o do prompt original enviado ao Lovable. NÃ£o localizei no repositÃ³rio o texto integral do prompt efetivamente utilizado nem um registro que comprove essa submissÃ£o.
-
-### Ajustes confirmados pelo histÃ³rico Git
-
-O histÃ³rico registra a inclusÃ£o de transaÃ§Ãµes fictÃ­cias (`0e86680`), a adiÃ§Ã£o do painel financeiro (`7ad0605`), estados e sugestÃµes de interaÃ§Ã£o (`484805a`), o workflow de testes (`17635bd`) e uma etapa de formataÃ§Ã£o/verificaÃ§Ã£o (`4ddc2da`). Isso confirma a evoluÃ§Ã£o desses arquivos no projeto; nÃ£o comprova quais instruÃ§Ãµes foram enviadas ao Lovable nem uma revisÃ£o manual P09.
-
-### Funcionalidade implementada
-
-**TransaÃ§Ãµes demonstrativas e anÃ¡lise de gastos por categoria.** A demonstraÃ§Ã£o contÃ©m oito transaÃ§Ãµes fictÃ­cias definidas em `src/lib/finance.ts`. A funÃ§Ã£o `spendingByCategory()` soma as despesas por categoria e ordena os totais do maior para o menor. O painel financeiro e as respostas do chat utilizam essa funÃ§Ã£o.
-
-Os testes existentes cobrem essas funcionalidades e esperam os seguintes totais: Transporte: **US$ 173,90**; AlimentaÃ§Ã£o: **US$ 147,90**; Moradia: **US$ 120,00**; ServiÃ§os: **US$ 49,00**; total de despesas: **US$ 490,80**.
-
-### Capturas de tela ainda necessÃ¡rias
-
-NÃ£o hÃ¡ capturas de tela (`.png`, `.jpg`, `.jpeg`, `.webp` ou `.gif`) no repositÃ³rio neste momento. Para completar as evidÃªncias de portfÃ³lio, ainda faltam:
-
-- capturas das respostas reais do Pluggy Docs MCP, sem dados sensÃ­veis;
-- capturas do P05 e do P06 do Plaid Sandbox MCP; nÃ£o exiba credenciais ou token, e nÃ£o indique a instituiÃ§Ã£o como confirmada sem prova;
-- capturas da consulta P07 mostrando contas, as cinco transaÃ§Ãµes mais recentes e as trÃªs observaÃ§Ãµes, com perÃ­odo e moeda visÃ­veis;
-- capturas da conversa com o aplicativo publicado e do painel em desktop e celular, como parte da revisÃ£o P09.
-
-As tabelas e os totais deste README sÃ£o transcriÃ§Ãµes resumidas do Guia do Instrutor, nÃ£o imagens nem registros brutos das chamadas MCP. NÃ£o foram criadas capturas para esta documentaÃ§Ã£o.
-
-Materiais de referÃªncia: [Guia do Instrutor (PDF)](https://hermes.dio.me/files/assets/0e56ff91-f2bd-4f37-bd37-a330f5a844f2.pdf) e [ApresentaÃ§Ã£o da aula (PDF)](https://hermes.dio.me/files/assets/e0d3f15d-6418-4ca0-98a7-4130b7832c43.pdf).
-
-## PrÃ³ximos passos para a integraÃ§Ã£o MCP e produÃ§Ã£o
-
-1. Implementar um servidor MCP autenticado e vinculado a usuÃ¡rios, conforme os requisitos em [docs/pluggy-integration.md](./docs/pluggy-integration.md).
-2. Definir e implementar uma integraÃ§Ã£o Plaid no servidor, comeÃ§ando pelo Sandbox e mantendo credenciais fora do frontend e de variÃ¡veis `VITE_*`.
-3. Implementar autenticaÃ§Ã£o, fluxo Plaid Link, troca segura de tokens e persistÃªncia protegida por usuÃ¡rio.
-4. Implementar chamadas server-side para contas e sincronizaÃ§Ã£o de transaÃ§Ãµes, aproveitando e validando os mapeadores e a paginaÃ§Ã£o jÃ¡ preparados.
-5. Criar um provedor real que substitua a origem dos dados de demonstraÃ§Ã£o sem transferir credenciais ou lÃ³gica de integraÃ§Ã£o para os componentes de UI; validar consentimento, erros, atualizaÃ§Ã£o e reconciliaÃ§Ã£o dos dados.
-
-O MCP ainda nÃ£o foi implementado. O fluxo Pluggy do dashboard estÃ¡ disponÃ­vel; Sandbox fornece dados sintÃ©ticos e o uso de instituiÃ§Ãµes reais depende de credenciais e acesso habilitado pela Pluggy.
+- [Pluggy Docs](https://docs.pluggy.ai/)
+- [Pluggy MCP](https://mcp.pluggy.ai/mcp)
+- [Supabase Edge Functions](https://supabase.com/docs/guides/functions)
+- [DIO](https://www.dio.me/)
