@@ -1,0 +1,3 @@
+[functions.dio-chat]
+# O app chama a função pelo servidor com a chave de serviço; mantenha a verificação de JWT ativa.
+verify_jwt = true

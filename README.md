@@ -11,7 +11,8 @@ O **Nexora Finance** é uma demonstração educacional de chat financeiro em por
 - **Demo pública:** <https://pocketwise-finance-chat.lovable.app>
 - A versão publicada conhecida é anterior a este checkout e não comprova a integração atual com a Edge Function nem as melhorias deste repositório. Atualize e revise o projeto Lovable antes de publicar uma nova versão.
 - Nenhum deploy/publicação automática foi feito por este trabalho.
-- A Edge Function `dio-chat` é hospedada fora deste repositório. A chamada do app está implementada, mas a função e sua execução interna de MCP precisam ser confirmadas no projeto Supabase de destino.
+- A Edge Function `dio-chat` agora está versionada em [`supabase/functions/dio-chat/index.ts`](./supabase/functions/dio-chat/index.ts). Ela lê contas e transações da Plaid Sandbox (`/accounts/get` e `/transactions/get`, 90 dias, paginado, com novas tentativas para `PRODUCT_NOT_READY`). Falta apenas implantá-la e validar no seu projeto Supabase: veja [`docs/deploy-dio-chat.md`](./docs/deploy-dio-chat.md).
+- **Sobre o MCP:** a função chama os mesmos endpoints da Plaid Sandbox que o `mcp-server-plaid` usa, mas diretamente por HTTP (um MCP local não roda dentro de uma Edge Function). O MCP da Plaid foi usado no desenvolvimento para criar o Item e conferir os dados (evidências em `docs/evidencias/`); o MCP da Pluggy foi usado como documentação.
 
 ## Cenário e origem dos dados
 
@@ -22,7 +23,7 @@ O cenário é um chat financeiro demonstrativo: a pessoa consulta contas de exem
 | Contas e saldos locais | `DEMO_ACCOUNTS` em `src/lib/finance.ts` | Dados fictícios estáticos, não obtidos da Plaid em tempo real. |
 | Transações locais | `DEMO_TRANSACTIONS` em `src/lib/finance.ts` | Amostra ilustrativa de oito registros; não é um extrato completo nem conciliado. |
 | Contas e transações Pluggy | Rotas server-side Pluggy e provedor do painel | Disponíveis após autorização de uma sessão Pluggy; não recalculam o saldo local. |
-| Resposta de Dio | `dio-chat` via `src/lib/chat-service.ts` e `src/lib/dio-chat.service.ts` | A função remota não está versionada neste repositório; em falha, a UI identifica o fallback local. |
+| Resposta de Dio | `dio-chat` (`supabase/functions/dio-chat`) via `src/lib/chat-service.ts` | Respostas por regras (modo `regras`), sem IA generativa. Dados da Plaid Sandbox; em falha, a UI identifica o fallback local. |
 | Plaid Sandbox | MCP local configurado em `.vscode/mcp.json` | Laboratório separado; suas consultas não alimentam os dados estáticos do dashboard. |
 | Documentação Pluggy | MCP remoto `https://mcp.pluggy.ai/mcp` | Documentação, não acesso a contas bancárias. |
 
@@ -125,7 +126,7 @@ Não há autenticação multiusuário para a conexão Pluggy atual: a identidade
 ## Pendências para o Lovable e Supabase
 
 1. Atualize o projeto Lovable correspondente à demo com este checkout, preservando TanStack Start, modo demo e serviço do chat. Use o [`docs/lovable-handoff.md`](./docs/lovable-handoff.md).
-2. Publique `dio-chat` no projeto Supabase correto, configure segredos somente no servidor e valide o contrato `{ resposta, modo, meta }` / `{ erro }`. O código da função não está neste repositório.
+2. Implante `dio-chat` (código em `supabase/functions/dio-chat`), configure `PLAID_CLIENT_ID` e `PLAID_SECRET` como Secrets da função e valide o contrato `{ resposta, modo, meta }` / `{ erro }`. Passo a passo em `docs/deploy-dio-chat.md`.
 3. Valide de ponta a ponta resposta real, timeout, retry, fallback, tabela em celular, sugestões, histórico e exclusão. Confirme que o selo só aparece após resposta remota válida.
 4. Confira a experiência em desktop e celular, o aviso de dados fictícios e a marca Nexora; publique manualmente e atualize este README com o estado confirmado.
 5. Para concluir a evolução MCP, implemente OAuth, autorização por Item no servidor e ferramentas somente de leitura, com testes de contrato e isolamento entre usuários.

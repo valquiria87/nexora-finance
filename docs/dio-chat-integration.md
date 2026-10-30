@@ -63,7 +63,7 @@ O cliente usa primeiro as variáveis \`DIO_CHAT_*\` e, se não estiverem definid
 
 ## Limite de escopo e evidência
 
-O código da Edge Function publicada permanece no projeto Supabase e não está incluído neste repositório. Este documento descreve o contrato utilizado pela aplicação, não o código interno da função.
+O código da Edge Function está em `supabase/functions/dio-chat/index.ts`. Ela usa regras (modo `regras`) sobre a Plaid Sandbox. Implantação: `docs/deploy-dio-chat.md`.
 
 O código versionado também não prova, sozinho, quais ferramentas MCP a Edge Function executa. Para comprovar a parte MCP do desafio, anexe evidências reais da execução (nome da ferramenta, parâmetros não sensíveis e resultado) e mantenha o código do backend disponível para auditoria quando possível.
 
