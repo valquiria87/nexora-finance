@@ -244,7 +244,11 @@ function Index() {
       setConvs((previous) => {
         const next = previous.map((conversation) =>
           conversation.id === conversationId
-            ? { ...conversation, messages: [...conversation.messages, reply], updatedAt: Date.now() }
+            ? {
+                ...conversation,
+                messages: [...conversation.messages, reply],
+                updatedAt: Date.now(),
+              }
             : conversation,
         );
         save(next);
@@ -265,7 +269,11 @@ function Index() {
       setConvs((previous) => {
         const next = previous.map((conversation) =>
           conversation.id === conversationId
-            ? { ...conversation, messages: [...conversation.messages, reply], updatedAt: Date.now() }
+            ? {
+                ...conversation,
+                messages: [...conversation.messages, reply],
+                updatedAt: Date.now(),
+              }
             : conversation,
         );
         save(next);
@@ -297,7 +305,8 @@ function Index() {
       setActiveId(conversationId);
     }
 
-    const previousMessages = list.find((conversation) => conversation.id === conversationId)?.messages ?? [];
+    const previousMessages =
+      list.find((conversation) => conversation.id === conversationId)?.messages ?? [];
     const history = previousMessages
       .slice(-12)
       .map((message) => ({ role: message.role, content: message.text }));
@@ -334,7 +343,8 @@ function Index() {
         ? {
             ...entry,
             messages: entry.messages.filter(
-              (message) => !(message.role === "assistant" && message.retryUserMessageId === userMessageId),
+              (message) =>
+                !(message.role === "assistant" && message.retryUserMessageId === userMessageId),
             ),
             updatedAt: Date.now(),
           }
@@ -653,8 +663,8 @@ function Index() {
               <div className="nexora-demo-banner">
                 <span className="nexora-demo-tag">Demonstração · Dados fictícios</span>
                 <span>
-                  A integração só será indicada após uma resposta bem-sucedida. Se ela falhar,
-                  o assistente usa os dados locais de demonstração.
+                  A integração só será indicada após uma resposta bem-sucedida. Se ela falhar, o
+                  assistente usa os dados locais de demonstração.
                 </span>
               </div>
               <div className="nexora-chat-thread">
