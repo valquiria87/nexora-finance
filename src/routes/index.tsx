@@ -158,9 +158,7 @@ function Index() {
       )
         setConvs(saved);
       else
-        setError(
-          "Não foi possível recuperar o histórico. Você pode iniciar uma nova conversa.",
-        );
+        setError("Não foi possível recuperar o histórico. Você pode iniciar uma nova conversa.");
     } catch {
       setError("Não foi possível recuperar o histórico. Você pode iniciar uma nova conversa.");
     }
