@@ -9,10 +9,7 @@ function errorJson(message: string, status: number) {
 function isHistoryMessage(value: unknown): value is DioChatHistoryMessage {
   if (!value || typeof value !== "object") return false;
   const entry = value as { role?: unknown; content?: unknown };
-  return (
-    (entry.role === "user" || entry.role === "assistant") &&
-    typeof entry.content === "string"
-  );
+  return (entry.role === "user" || entry.role === "assistant") && typeof entry.content === "string";
 }
 
 export const Route = createFileRoute("/api/dio-chat")({
@@ -39,12 +36,10 @@ export const Route = createFileRoute("/api/dio-chat")({
           return errorJson("O histórico da conversa está em formato inválido.", 400);
         }
 
-        const historico = historicoInput
-          .slice(-12)
-          .map((entry) => ({
-            role: entry.role,
-            content: entry.content.slice(0, 4000),
-          }));
+        const historico = historicoInput.slice(-12).map((entry) => ({
+          role: entry.role,
+          content: entry.content.slice(0, 4000),
+        }));
 
         try {
           const { data, error } = await getDioChatSupabaseClient().functions.invoke("dio-chat", {
