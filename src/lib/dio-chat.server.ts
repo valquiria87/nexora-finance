@@ -11,14 +11,13 @@ let activeConfig = "";
 export function getDioChatSupabaseClient(): SupabaseClient {
   const url = process.env["DIO_CHAT_SUPABASE_URL"] || process.env["SUPABASE_URL"];
   const key =
-    process.env["DIO_CHAT_SUPABASE_SERVICE_ROLE_KEY"] ||
-    process.env["SUPABASE_SERVICE_ROLE_KEY"];
+    process.env["DIO_CHAT_SUPABASE_SERVICE_ROLE_KEY"] || process.env["SUPABASE_SERVICE_ROLE_KEY"];
 
   if (!url || !key) {
     throw new Error("A configuração server-side do Supabase para o chat está ausente.");
   }
 
-  const configKey = `${url}:${key}`;
+  const configKey = [url, key].join(":");
   if (!client || activeConfig !== configKey) {
     client = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
