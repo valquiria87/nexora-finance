@@ -691,7 +691,9 @@ function Index() {
                     role="status"
                   >
                     <LoaderCircle className="h-4 w-4 animate-spin" />{" "}
-                    {convs.some((conversation) => conversation.messages.some((message) => message.responseStatus === "success"))
+                    {convs.some((conversation) =>
+                      conversation.messages.some((message) => message.responseStatus === "success"),
+                    )
                       ? "Consultando os dados de teste…"
                       : "Preparando os dados de teste…"}
                   </div>
