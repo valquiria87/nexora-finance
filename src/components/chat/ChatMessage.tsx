@@ -163,10 +163,7 @@ function RichText({ text }: { text: string }) {
       !/^(#{1,6})\s+/.test(lines[index] ?? "") &&
       !/^\s*[-*]\s+/.test(lines[index] ?? "") &&
       !/^\s*\d+[.)]\s+/.test(lines[index] ?? "") &&
-      !(
-        (lines[index] ?? "").includes("|") &&
-        isTableSeparator(lines[index + 1] ?? "")
-      )
+      !((lines[index] ?? "").includes("|") && isTableSeparator(lines[index + 1] ?? ""))
     ) {
       paragraph.push(lines[index] ?? "");
       index++;
@@ -183,11 +180,7 @@ function RichText({ text }: { text: string }) {
     );
   }
 
-  return (
-    <div className="space-y-3 leading-relaxed">
-      {blocks}
-    </div>
-  );
+  return <div className="space-y-3 leading-relaxed">{blocks}</div>;
 }
 
 function formatPeriodDate(value: string): string {

@@ -37,9 +37,12 @@ export const Route = createFileRoute("/api/dio-chat")({
           const data = await retry(
             async () => {
               attempts++;
-              const result = await getDioChatSupabaseClient().functions.invoke<unknown>("dio-chat", {
-                body: { mensagem, historico },
-              });
+              const result = await getDioChatSupabaseClient().functions.invoke<unknown>(
+                "dio-chat",
+                {
+                  body: { mensagem, historico },
+                },
+              );
               if (result.error) throw result.error;
               if (!result.data) throw new Error("A função não retornou dados.");
               return result.data;
