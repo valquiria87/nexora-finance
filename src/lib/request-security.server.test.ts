@@ -50,9 +50,7 @@ describe("readJsonBodyLimited", () => {
       body: "{}",
       headers: { "content-length": "100" },
     });
-    await expect(readJsonBodyLimited(request, 10)).rejects.toBeInstanceOf(
-      RequestBodyTooLargeError,
-    );
+    await expect(readJsonBodyLimited(request, 10)).rejects.toBeInstanceOf(RequestBodyTooLargeError);
   });
 
   it("rejects an oversized streamed body even without Content-Length", async () => {
@@ -60,9 +58,7 @@ describe("readJsonBodyLimited", () => {
       method: "POST",
       body: JSON.stringify({ payload: "x".repeat(100) }),
     });
-    await expect(readJsonBodyLimited(request, 10)).rejects.toBeInstanceOf(
-      RequestBodyTooLargeError,
-    );
+    await expect(readJsonBodyLimited(request, 10)).rejects.toBeInstanceOf(RequestBodyTooLargeError);
   });
 
   it("rejects malformed JSON", async () => {
