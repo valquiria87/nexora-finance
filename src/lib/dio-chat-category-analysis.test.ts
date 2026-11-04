@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzeTransactions,
+  dispatchChatIntent,
   routeIntent,
   sumTransactionsByCurrency,
 } from "../../supabase/functions/dio-chat/category-analysis.ts";
@@ -111,6 +112,20 @@ describe("routeIntent", () => {
   it("reconhece perguntas sobre entradas confirmadas", () => {
     expect(routeIntent("Mostre minhas entradas confirmadas por moeda.")).toBe("entradas");
     expect(routeIntent("Quais receitas foram recebidas?")).toBe("entradas");
+  });
+
+  it("encaminha uma pergunta sobre entradas confirmadas para o handler de entradas", () => {
+    const handlers = {
+      contas: () => "contas",
+      saldos: () => "saldos",
+      recentes: () => "recentes",
+      entradas: () => "incomeAnswer",
+      categoria: () => "categoria",
+      resumo: () => "resumo",
+    };
+
+    const intent = routeIntent("Mostre minhas entradas confirmadas por moeda.");
+    expect(dispatchChatIntent(intent, handlers)).toBe("incomeAnswer");
   });
 
   it("mantém perguntas específicas de gastos na rota de categorias", () => {
