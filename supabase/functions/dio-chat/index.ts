@@ -201,8 +201,6 @@ const SUBTYPE_PT: Record<string, string> = {
 const typeLabel = (a: PlaidAccount) =>
   SUBTYPE_PT[(a.subtype ?? "").toLowerCase()] ?? a.subtype ?? a.type;
 
-const isDebtAccount = (a: PlaidAccount) => a.type === "credit" || a.type === "loan";
-
 // ---------- categorias ----------
 const CATEGORY_PT: Record<string, string> = {
   FOOD_AND_DRINK: "Alimentação",
