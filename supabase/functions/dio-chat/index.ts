@@ -5,6 +5,7 @@ import {
   requestedRecentLimit,
   routeIntent,
   selectRecentTransactions,
+  sumAccountsByCurrency,
   sumTransactionsByCurrency,
 } from "./category-analysis.ts";
 // Supabase Edge Function (Deno): dio-chat
@@ -483,15 +484,81 @@ function summaryAnswer(s: Snapshot): { text: string; registros: number } {
   const analysis = analyzeTransactions(s.transactions, CATEGORY_PT);
   const confirmedOut = sumTransactionsByCurrency(s.transactions, (t) => !t.pending && t.amount > 0);
   const confirmedIn = sumTransactionsByCurrency(s.transactions, (t) => !t.pending && t.amount < 0);
-  const top = [...analysis.categories].sort((a, b) => b.total - a.total).slice(0, 3);
+  const groups = classifyBalanceAccounts(s.accounts);
+
+  const balanceRows = (
+    label: string,
+    accounts: PlaidAccount[],
+    getValue: (account: PlaidAccount) => number | null | undefined,
+  ) => {
+    const totals = sumAccountsByCurrency(accounts, getValue);
+    return totals.length
+      ? totals.map((row) => {
+          const currency = row.currency ?? "moeda não informada";
+          const missing = row.missingCount ? ` · ${row.missingCount} sem valor informado` : "";
+          const amount = row.count ? money(row.total, row.currency) : "Não informado";
+          return `| ${label} (${currency}) | ${amount} | ${row.count}${missing} |`;
+        })
+      : [`| ${label} | Não informado | 0 |`];
+  };
 
   const currencyRows = (label: string, rows: Array<{ currency: string | null; total: number; count: number }>) =>
     rows.length
       ? rows.map((row) => `| ${label} (${row.currency ?? "moeda não informada"}) | ${row.count} | ${money(row.total, row.currency)} |`)
       : [`| ${label} | 0 | Não informado |`];
 
+  const categorySections = new Map<string, typeof analysis.categories>();
+  for (const row of analysis.categories) {
+    const key = row.currency ?? "Moeda não informada";
+    categorySections.set(key, [...(categorySections.get(key) ?? []), row]);
+  }
+  const topCategoryRows = [...categorySections.entries()].flatMap(([currency, rows]) => [
+    `**${currency}**`,
+    "",
+    "| Categoria | Registros | Saídas |",
+    "| --- | --- | --- |",
+    ...[...rows].sort((a, b) => b.total - a.total).slice(0, 3)
+      .map((row) => `| ${row.category} | ${row.count} | ${money(row.total, row.currency)} |`),
+    "",
+  ]);
+
   const text = [
-    "Resumo das movimentações do período (**dados fictícios**):",
+    "Resumo geral das finanças (**dados fictícios da Plaid Sandbox**):",
+    "",
+    "**Dinheiro disponível — contas de depósito**",
+    "",
+    "| Indicador | Valor disponível | Contas consideradas |",
+    "| --- | --- | --- |",
+    ...balanceRows("Disponível", groups.deposits, (a) => a.balances.available),
+    "",
+    "**Investimentos e aposentadoria**",
+    "",
+    "| Indicador | Saldo atual | Contas consideradas |",
+    "| --- | --- | --- |",
+    ...balanceRows("Investimentos", groups.investments, (a) => a.balances.current),
+    "",
+    ...(groups.otherAssets.length ? [
+      "**Outros ativos (tipo não classificado)**",
+      "",
+      "| Indicador | Saldo atual | Contas consideradas |",
+      "| --- | --- | --- |",
+      ...balanceRows("Outros ativos", groups.otherAssets, (a) => a.balances.current),
+      "",
+    ] : []),
+    "**Dívidas**",
+    "",
+    "| Indicador | Dívida atual | Contas consideradas |",
+    "| --- | --- | --- |",
+    ...balanceRows("Dívidas", groups.debts, (a) => a.balances.current),
+    "",
+    "**Limites de crédito (não são dinheiro disponível)**",
+    "",
+    "| Indicador | Valor | Contas consideradas |",
+    "| --- | --- | --- |",
+    ...balanceRows("Limite total", groups.debts, (a) => a.balances.limit),
+    ...balanceRows("Crédito disponível", groups.debts, (a) => a.balances.available),
+    "",
+    "**Movimentações do período**",
     "",
     "| Indicador | Registros | Valor |",
     "| --- | --- | --- |",
@@ -501,15 +568,12 @@ function summaryAnswer(s: Snapshot): { text: string; registros: number } {
     ...currencyRows("Entradas confirmadas", confirmedIn),
     ...currencyRows("Saídas confirmadas", confirmedOut),
     "",
-    "**Três maiores categorias de saída**",
+    "**Três maiores categorias de saída por moeda**",
     "",
-    "| Categoria | Moeda | Registros | Saídas |",
-    "| --- | --- | --- | --- |",
-    ...top.map((row) => `| ${row.category} | ${row.currency ?? "Não informada"} | ${row.count} | ${money(row.total, row.currency)} |`),
+    ...(topCategoryRows.length ? topCategoryRows : ["Nenhuma saída categorizada no período.", ""]),
+    "_Transferências e pagamentos de dívidas estão incluídos nas saídas; não equivalem necessariamente a consumo. Cada total é calculado separadamente por moeda. Valores ausentes não são tratados como zero._",
     "",
-    "_Os totais incluem transferências e pagamentos de dívidas; não equivalem a renda e consumo. Moedas diferentes permanecem separadas._",
-    "",
-    describeWindow(s, s.transactions.length),
+    `_Contas consultadas: ${s.accounts.length}. ${describeWindow(s, s.transactions.length)}_`,
   ].join("\n");
   return { text, registros: s.transactions.length };
 }
