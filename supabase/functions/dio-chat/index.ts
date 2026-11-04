@@ -350,7 +350,7 @@ function recentAnswer(s: Snapshot, limit = 5): { text: string; registros: number
   const top = selectRecentTransactions(s.transactions, limit);
   if (top.length === 0) {
     return {
-      text: `Não encontrei transações no período consultado.\\n\\n${describeWindow(s, 0)}`,
+      text: `Não encontrei transações no período consultado.\n\n${describeWindow(s, 0)}`,
       registros: 0,
     };
   }
@@ -373,7 +373,7 @@ function recentAnswer(s: Snapshot, limit = 5): { text: string; registros: number
     "_Na Plaid, valor positivo é saída e negativo é entrada. Descrições são as retornadas pela API; os valores de Sandbox podem parecer pouco realistas._",
     "",
     describeWindow(s, s.transactions.length),
-  ].join("\\n");
+  ].join("\n");
   return { text, registros: s.transactions.length };
 }
 
@@ -448,7 +448,7 @@ function incomeAnswer(s: Snapshot): { text: string; registros: number } {
     "_Na Plaid, valores negativos representam entradas. Transações pendentes e saídas não entram nestes totais; moedas diferentes não são somadas._",
     "",
     describeWindow(s, s.transactions.length),
-  ].join("\\n");
+  ].join("\n");
   return { text, registros: s.transactions.length };
 }
 
