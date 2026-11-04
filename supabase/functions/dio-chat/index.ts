@@ -496,7 +496,8 @@ function summaryAnswer(s: Snapshot): { text: string; registros: number } {
       ? totals.map((row) => {
           const currency = row.currency ?? "moeda não informada";
           const missing = row.missingCount ? ` · ${row.missingCount} sem valor informado` : "";
-          return `| ${label} (${currency}) | ${money(row.total, row.currency)} | ${row.count}${missing} |`;
+          const amount = row.count ? money(row.total, row.currency) : "Não informado";
+          return `| ${label} (${currency}) | ${amount} | ${row.count}${missing} |`;
         })
       : [`| ${label} | Não informado | 0 |`];
   };
