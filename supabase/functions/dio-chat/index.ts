@@ -216,12 +216,6 @@ const CATEGORY_PT: Record<string, string> = {
   OTHER: "Outros",
 };
 
-function categoryOf(t: PlaidTx): string {
-  const key = t.personal_finance_category?.primary;
-  if (key && CATEGORY_PT[key]) return CATEGORY_PT[key];
-  return "Sem categoria informada";
-}
-
 const norm = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
@@ -381,10 +375,6 @@ function recentAnswer(s: Snapshot): { text: string; registros: number } {
   return { text, registros: s.transactions.length };
 }
 
-function categoryTotals(s: Snapshot) {
-  return analyzeTransactions(s.transactions, CATEGORY_PT).categories;
-}
-
 function categoryAnswer(s: Snapshot, message: string): { text: string; registros: number } {
   const analysis = analyzeTransactions(s.transactions, CATEGORY_PT);
   const totals = analysis.categories;
@@ -453,6 +443,7 @@ function summaryAnswer(s: Snapshot): { text: string; registros: number } {
     "| --- | --- | --- |",
     `| Transações confirmadas | ${analysis.confirmedOutCount + analysis.confirmedInCount} | — |`,
     `| Pendentes | ${analysis.pendingOutCount + analysis.pendingInCount} | — |`,
+    `| Sem valor | ${analysis.zeroAmountCount} | — |`,
     ...currencyRows("Entradas confirmadas", confirmedIn),
     ...currencyRows("Saídas confirmadas", confirmedOut),
     "",
