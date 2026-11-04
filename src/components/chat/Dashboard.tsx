@@ -3,7 +3,7 @@ import {
   ArrowUpRight,
   CreditCard,
   Landmark,
-  PieChart,
+  PieChart as PieChartIcon,
   RefreshCw,
   Wallet,
 } from "lucide-react";
@@ -17,6 +17,18 @@ import {
   type FinanceDataProvider,
 } from "@/lib/finance";
 import { Button } from "@/components/ui/button";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 export type DashboardSection = "overview" | "accounts" | "transactions";
 
@@ -66,6 +78,46 @@ export function Dashboard({
   };
 
   const categories = spendingByCategory(txs);
+  const categoryGroups = [
+    ...new Set(
+      categories.map((item) => item.currency ?? (provider.mode === "demo" ? "BRL" : "UNKNOWN")),
+    ),
+  ].map((currency) => ({
+    currency,
+    data: categories
+      .filter(
+        (item) => (item.currency ?? (provider.mode === "demo" ? "BRL" : "UNKNOWN")) === currency,
+      )
+      .map((item) => ({ name: item.category, value: item.total })),
+  }));
+  const monthlyGroups = (() => {
+    const grouped = new Map<string, Map<string, number>>();
+    for (const transaction of txs) {
+      if (!isExpense(transaction) || !/^\d{4}-\d{2}-\d{2}$/.test(transaction.date)) continue;
+      const currency =
+        transaction.currency ??
+        currencyFor(transaction.accountId) ??
+        (provider.mode === "demo" ? "BRL" : "UNKNOWN");
+      const month = transaction.date.slice(0, 7);
+      const months = grouped.get(currency) ?? new Map<string, number>();
+      months.set(month, Math.round(((months.get(month) ?? 0) + transaction.amount) * 100) / 100);
+      grouped.set(currency, months);
+    }
+    return [...grouped].map(([currency, months]) => ({
+      currency,
+      data: [...months]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([month, total]) => ({
+          month,
+          label: new Date(`${month}-01T12:00:00`).toLocaleDateString("pt-BR", {
+            month: "short",
+            year: "2-digit",
+          }),
+          total,
+        })),
+    }));
+  })();
+  const chartColors = ["#16a085", "#4f86c6", "#e6a23c", "#9b72cf", "#e47777", "#58a6a6", "#8b9a46"];
   const insights = automaticSpendingInsights(txs);
   const categoryTotals = new Map<string, number>();
   const categoryMax = new Map<string, number>();
@@ -78,7 +130,7 @@ export function Dashboard({
     .map(([currency, amount]) => money(amount, currency === "UNKNOWN" ? null : currency))
     .join(" · ");
   const latest = latestTransactions(txs, section === "overview" ? 5 : transactionLimit);
-  const connected = provider.mode === "pluggy";
+  const connected = provider.mode !== "demo";
   const title =
     section === "accounts" ? "Contas" : section === "transactions" ? "Transações" : "Visão geral";
 
@@ -157,7 +209,15 @@ export function Dashboard({
                       </span>
                     </div>
                   )}
-                  {!connected && <span className="nexora-demo-tag">Ambiente de demonstração</span>}
+                  {provider.mode === "demo" && (
+                    <span className="nexora-demo-tag">Ambiente de demonstração</span>
+                  )}
+                  {provider.mode === "pluggy" && (
+                    <span className="nexora-demo-tag">Pluggy Sandbox — dados fictícios</span>
+                  )}
+                  {provider.mode === "plaid" && (
+                    <span className="nexora-demo-tag">Plaid Sandbox · dados fictícios</span>
+                  )}
                 </div>
               )}
 
@@ -192,11 +252,72 @@ export function Dashboard({
                     <div>
                       <p className="nexora-eyebrow">RESUMO</p>
                       <h2>
-                        <PieChart /> Gastos por categoria
+                        <PieChartIcon /> Gastos por categoria
                       </h2>
                     </div>
                   </div>
                   <p className="nexora-total">{spendingSummary}</p>
+                  <div className="nexora-chart-grid">
+                    {categoryGroups.map((group) => (
+                      <div className="nexora-chart-card" key={group.currency}>
+                        <p className="nexora-chart-caption">
+                          Distribuição em{" "}
+                          {group.currency === "UNKNOWN" ? "moeda não informada" : group.currency}
+                        </p>
+                        <div
+                          className="nexora-chart"
+                          role="img"
+                          aria-label={`Gráfico de rosca de gastos por categoria em ${group.currency}`}
+                        >
+                          <ResponsiveContainer width="100%" height={230}>
+                            <PieChart>
+                              <Pie
+                                data={group.data}
+                                dataKey="value"
+                                nameKey="name"
+                                innerRadius={58}
+                                outerRadius={88}
+                                paddingAngle={3}
+                              >
+                                {group.data.map((item, index) => (
+                                  <Cell
+                                    key={item.name}
+                                    fill={chartColors[index % chartColors.length]}
+                                  />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                formatter={(value) =>
+                                  money(
+                                    Number(value),
+                                    group.currency === "UNKNOWN" ? null : group.currency,
+                                  )
+                                }
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <ul className="nexora-chart-legend">
+                          {group.data.map((item, index) => (
+                            <li key={item.name}>
+                              <span>
+                                <i
+                                  style={{ background: chartColors[index % chartColors.length] }}
+                                />
+                                {item.name}
+                              </span>
+                              <strong>
+                                {money(
+                                  item.value,
+                                  group.currency === "UNKNOWN" ? null : group.currency,
+                                )}
+                              </strong>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
                   <div className="nexora-category-list">
                     {categories.map((category) => {
                       const currency =
@@ -216,6 +337,67 @@ export function Dashboard({
                         </div>
                       );
                     })}
+                  </div>
+                </article>
+              )}
+              {monthlyGroups.length > 0 && (
+                <article className="nexora-panel">
+                  <div className="nexora-panel-heading">
+                    <div>
+                      <p className="nexora-eyebrow">TENDÊNCIA</p>
+                      <h2>Evolução das despesas</h2>
+                    </div>
+                  </div>
+                  <p className="nexora-footnote">
+                    Somente saídas registradas, agrupadas por mês. Cada moeda é exibida
+                    separadamente.
+                  </p>
+                  <div className="nexora-monthly-charts">
+                    {monthlyGroups.map((group) => (
+                      <div className="nexora-monthly-chart" key={group.currency}>
+                        <p className="nexora-chart-caption">
+                          {group.currency === "UNKNOWN" ? "Moeda não informada" : group.currency}
+                        </p>
+                        <div
+                          role="img"
+                          aria-label={`Gráfico de evolução mensal das despesas em ${group.currency}`}
+                        >
+                          <ResponsiveContainer width="100%" height={260}>
+                            <BarChart
+                              data={group.data}
+                              margin={{ top: 12, right: 12, left: 4, bottom: 4 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                              <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                              <YAxis
+                                tickLine={false}
+                                axisLine={false}
+                                width={76}
+                                tickFormatter={(value) =>
+                                  Number(value).toLocaleString("pt-BR", { notation: "compact" })
+                                }
+                              />
+                              <Tooltip
+                                labelFormatter={(_, payload) => payload?.[0]?.payload?.month ?? ""}
+                                formatter={(value) =>
+                                  money(
+                                    Number(value),
+                                    group.currency === "UNKNOWN" ? null : group.currency,
+                                  )
+                                }
+                              />
+                              <Bar
+                                dataKey="total"
+                                name="Despesas"
+                                fill="#16a085"
+                                radius={[6, 6, 0, 0]}
+                                maxBarSize={56}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </article>
               )}
@@ -323,32 +505,59 @@ function AccountList({
   institution?: string | null | undefined;
 }) {
   return (
-    <div className="nexora-account-list">
+    <div className="nexora-account-grid">
       {accounts.map((account) => {
-        const amount = account.type === "credit" ? account.debt : account.available;
+        const isCredit = account.type === "credit";
+        const amount = isCredit
+          ? account.debt == null
+            ? undefined
+            : Math.abs(account.debt)
+          : account.type === "other"
+            ? account.balance
+            : account.available;
         const type =
           account.type === "credit"
             ? "Cartão de crédito"
             : account.type === "checking"
               ? "Conta corrente"
-              : "Poupança";
+              : account.type === "savings"
+                ? "Poupança"
+                : "Outra conta";
         return (
-          <div className="nexora-account-row" key={account.id}>
-            <span className="nexora-icon-box">
-              <Landmark />
-            </span>
-            <div className="nexora-row-main">
-              <strong>{account.name}</strong>
-              <span>
-                {type} · {account.currency ?? "Moeda não informada"} ·{" "}
-                {institution ?? "Instituição não informada"}
+          <article
+            className={`nexora-account-card ${isCredit ? "is-credit" : "is-cash"}`}
+            key={account.id}
+          >
+            <div className="nexora-account-card-top">
+              <span className="nexora-account-icon">
+                {isCredit ? <CreditCard /> : <Landmark />}
               </span>
+              <span className="nexora-account-type">{type}</span>
             </div>
-            <div className="nexora-row-value">
+            <div className="nexora-account-identity">
+              <h3>{account.name}</h3>
+              <p>
+                {institution ?? "Instituição não informada"} ·{" "}
+                {account.currency ?? "Moeda não informada"}
+              </p>
+            </div>
+            <div className="nexora-account-balance">
+              <span>
+                {isCredit
+                  ? "Saldo devedor"
+                  : account.type === "other"
+                    ? "Saldo informado"
+                    : "Saldo disponível"}
+              </span>
               <strong>{amount == null ? "Não informado" : money(amount, account.currency)}</strong>
-              <span>{account.type === "credit" ? "Saldo devedor" : "Saldo disponível"}</span>
             </div>
-          </div>
+            {isCredit && account.availableCredit != null && (
+              <div className="nexora-account-credit">
+                <span>Crédito disponível</span>
+                <strong>{money(account.availableCredit, account.currency)}</strong>
+              </div>
+            )}
+          </article>
         );
       })}
     </div>
@@ -368,38 +577,58 @@ function TransactionList({
 }) {
   if (!transactions.length) return <p className="nexora-empty">{emptyText}</p>;
   return (
-    <div className="nexora-transaction-list">
-      {transactions.map((transaction) => {
-        const expense = isExpense(transaction);
-        const date = new Date(`${transaction.date}T12:00:00`);
-        return (
-          <div className="nexora-transaction-row" key={transaction.id}>
-            <span
-              className={`nexora-flow-icon ${expense ? "is-outflow" : "is-inflow"}`}
-              aria-label={expense ? "Saída" : "Entrada"}
-            >
-              {expense ? <ArrowUpRight /> : <ArrowDownLeft />}
-            </span>
-            <div className="nexora-row-main">
-              <strong>{transaction.description}</strong>
-              <span>
-                {Number.isNaN(date.getTime()) ? transaction.date : date.toLocaleDateString("pt-BR")}{" "}
-                · {transaction.category || "Categoria não informada"}
-              </span>
-            </div>
-            <div className={`nexora-row-value ${expense ? "is-outflow-text" : "is-inflow-text"}`}>
-              <strong>
-                {expense ? "−" : "+"}
-                {money(
-                  Math.abs(transaction.amount),
-                  transaction.currency ?? currencyFor(transaction.accountId),
-                )}
-              </strong>
-              <span>{expense ? "Saída" : "Entrada"}</span>
-            </div>
-          </div>
-        );
-      })}
+    <div className="nexora-transactions-table-wrap">
+      <table className="nexora-transactions-table">
+        <thead>
+          <tr>
+            <th scope="col">Data</th>
+            <th scope="col">Descrição</th>
+            <th scope="col">Categoria</th>
+            <th scope="col">Tipo</th>
+            <th scope="col" className="is-numeric">
+              Valor
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {transactions.map((transaction) => {
+            const expense = isExpense(transaction);
+            const date = new Date(`${transaction.date}T12:00:00`);
+            return (
+              <tr key={transaction.id}>
+                <td className="nexora-transaction-date">
+                  {Number.isNaN(date.getTime())
+                    ? transaction.date
+                    : date.toLocaleDateString("pt-BR")}
+                </td>
+                <td className="nexora-transaction-description">{transaction.description}</td>
+                <td>
+                  <span className="nexora-category-tag">
+                    {transaction.category || "Não categorizada"}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    className={`nexora-transaction-kind ${expense ? "is-outflow" : "is-inflow"}`}
+                  >
+                    {expense ? <ArrowUpRight /> : <ArrowDownLeft />}
+                    {expense ? "Saída" : "Entrada"}
+                  </span>
+                </td>
+                <td
+                  className={`nexora-transaction-amount ${expense ? "is-outflow-text" : "is-inflow-text"}`}
+                >
+                  {expense ? "−" : "+"}
+                  {money(
+                    Math.abs(transaction.amount),
+                    transaction.currency ?? currencyFor(transaction.accountId),
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

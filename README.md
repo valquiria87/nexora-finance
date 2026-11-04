@@ -11,8 +11,8 @@ O **Nexora Finance** é uma demonstração educacional de chat financeiro em por
 - **Demo pública:** <https://pocketwise-finance-chat.lovable.app>
 - A versão publicada conhecida é anterior a este checkout e não comprova a integração atual com a Edge Function nem as melhorias deste repositório. Atualize e revise o projeto Lovable antes de publicar uma nova versão.
 - Nenhum deploy/publicação automática foi feito por este trabalho.
-- A Edge Function `dio-chat` agora está versionada em [`supabase/functions/dio-chat/index.ts`](./supabase/functions/dio-chat/index.ts). Ela lê contas e transações da Plaid Sandbox (`/accounts/get` e `/transactions/get`, 90 dias, paginado, com novas tentativas para `PRODUCT_NOT_READY`). Falta apenas implantá-la e validar no seu projeto Supabase: veja [`docs/deploy-dio-chat.md`](./docs/deploy-dio-chat.md).
-- **Sobre o MCP:** a função chama os mesmos endpoints da Plaid Sandbox que o `mcp-server-plaid` usa, mas diretamente por HTTP (um MCP local não roda dentro de uma Edge Function). O MCP da Plaid foi usado no desenvolvimento para criar o Item e conferir os dados (evidências em `docs/evidencias/`); o MCP da Pluggy foi usado como documentação.
+- A Edge Function `dio-chat` está versionada em [`supabase/functions/dio-chat/index.ts`](./supabase/functions/dio-chat/index.ts). O histórico deste projeto registra a função publicada como v4 ACTIVE, com segredos configurados no servidor e consultas à Plaid Sandbox. Antes de uma nova entrega, confirme o estado atual no painel Supabase e repita o teste ponta a ponta; o guia está em [`docs/deploy-dio-chat.md`](./docs/deploy-dio-chat.md).
+- **Sobre o MCP:** a função chama os mesmos endpoints da Plaid Sandbox que o `mcp-server-plaid` usa, mas diretamente por HTTP (um MCP local não roda dentro de uma Edge Function). A Plaid Sandbox foi explorada pela API oficial para criar um Item sintético e consultar contas e transações. A configuração local do MCP da Plaid é documentada separadamente; não atribuímos a criação desse Item ao MCP. O MCP da Pluggy foi usado para pesquisa documental.
 
 ## Cenário e origem dos dados
 
@@ -29,6 +29,10 @@ O cenário é um chat financeiro demonstrativo: a pessoa consulta contas de exem
 
 O sinal das transações segue a convenção Plaid adotada pelo app: valor positivo é saída e negativo é entrada. **O saldo bancário não é calculado a partir da amostra de transações.** Dívida e crédito disponível do cartão permanecem separados do dinheiro em conta. Não há conversão automática entre moedas.
 
+### Limitação observada nos dados da Pluggy Sandbox
+
+Na validação manual de 31/10/2026, as transações da conta corrente apresentaram sinais e tipos coerentes (`DEBIT` com valores negativos para saídas e `CREDIT` com valores positivos para entradas). Já alguns registros da conta Mastercard Black (por exemplo, SMART FIT ACADEMIA, SPOTIFY AB e NETFLIX.COM) chegaram com valores negativos e tipo `CREDIT`, sem metadados suficientes para determinar se representam compras, estornos ou créditos de fatura. A aplicação preserva o tipo e o valor recebidos da Pluggy; não reclassifica esses registros pelo nome do estabelecimento. Por isso, totais e categorias que dependam desses registros do cartão devem ser interpretados com cautela. Essa observação se refere à massa fictícia testada no Sandbox e não permite concluir que a mesma inconsistência exista em dados reais.
+
 ## Arquitetura
 
 ```mermaid
@@ -36,7 +40,7 @@ flowchart LR
   Browser["React / TanStack UI"] --> ChatService["Serviço substituível"]
   ChatService --> DioRoute["POST /api/dio-chat"]
   DioRoute --> Supabase["Supabase Edge Function: dio-chat"]
-  Supabase -. "pendente: publicar e validar" .-> Plaid["Plaid Sandbox"]
+  Supabase --> Plaid["Plaid Sandbox"]
   Browser --> Demo["Demo local fictícia"]
   Browser --> PluggyRoutes["Rotas server-side Pluggy"]
   PluggyRoutes --> PluggyAPI["API Pluggy"]
@@ -104,7 +108,7 @@ Não versionar nem compartilhar `.env.plaid`, Client ID, secret, access token ou
 
 ### Evidência de execução Plaid Sandbox
 
-A consulta manual pelo MCP foi realizada e registrada em [`docs/evidencias/P07-RESULTADO.md`](./docs/evidencias/P07-RESULTADO.md). O relatório registra 5 transações em USD no período de 28/06/2026 a 25/09/2026, paginação concluída em uma página e três observações agregadas: status por moeda, soma algébrica e maior movimento absoluto. Houve uma resposta inicial `PRODUCT_NOT_READY`; a nova tentativa foi concluída com sucesso. O relatório omite estabelecimentos, transações individuais e identificadores sensíveis. As capturas de tela devem permanecer sem chaves, tokens ou dados sensíveis.
+Uma execução anterior, registrada em [`docs/evidencias/P07-RESULTADO.md`](./docs/evidencias/P07-RESULTADO.md), retornou 5 transações em USD no período de 28/06/2026 a 25/09/2026. Em uma execução posterior pela API oficial Plaid Sandbox, com a persona sintética `user_transactions_dynamic`, foram retornadas 7 contas e 327 transações em USD no período de 03/08/2026 a 31/10/2026 (resumo e captura na seção de evidências visuais). São execuções distintas, com itens/personas diferentes. O relatório omite estabelecimentos, transações individuais e identificadores sensíveis. As capturas de tela devem permanecer sem chaves, tokens ou dados sensíveis.
 
 O código do app em `src/lib/plaid/` contém mapeadores e paginação puros, não um servidor MCP. Seus testes são offline. O CI não autentica em serviços externos nem executa chamadas MCP.
 
@@ -126,7 +130,7 @@ Não há autenticação multiusuário para a conexão Pluggy atual: a identidade
 ## Pendências para o Lovable e Supabase
 
 1. Atualize o projeto Lovable correspondente à demo com este checkout, preservando TanStack Start, modo demo e serviço do chat. Use o [`docs/lovable-handoff.md`](./docs/lovable-handoff.md).
-2. Implante `dio-chat` (código em `supabase/functions/dio-chat`), configure `PLAID_CLIENT_ID` e `PLAID_SECRET` como Secrets da função e valide o contrato `{ resposta, modo, meta }` / `{ erro }`. Passo a passo em `docs/deploy-dio-chat.md`.
+2. Verifique no Supabase se `dio-chat` continua ACTIVE, se os Secrets `PLAID_CLIENT_ID` e `PLAID_SECRET` estão configurados e se o código remoto corresponde a `supabase/functions/dio-chat`. O histórico registra v4 ACTIVE e teste local bem-sucedido via rota do app; repita a validação no ambiente publicado. Faça deploy somente se houver alteração aprovada. O procedimento está em `docs/deploy-dio-chat.md`.
 3. Valide de ponta a ponta resposta real, timeout, retry, fallback, tabela em celular, sugestões, histórico e exclusão. Confirme que o selo só aparece após resposta remota válida.
 4. Confira a experiência em desktop e celular, o aviso de dados fictícios e a marca Nexora; publique manualmente e atualize este README com o estado confirmado.
 5. Para concluir a evolução MCP, implemente OAuth, autorização por Item no servidor e ferramentas somente de leitura, com testes de contrato e isolamento entre usuários.
@@ -144,3 +148,35 @@ Não há autenticação multiusuário para a conexão Pluggy atual: a identidade
 - [Guia prático do instrutor](https://hermes.dio.me/files/assets/0e56ff91-f2bd-4f37-bd37-a330f5a844f2.pdf)
 - [Integração Pluggy deste projeto](./docs/pluggy-integration.md)
 - [Relatório agregado P07](./docs/evidencias/P07-RESULTADO.md)
+
+## Evidências visuais do desafio
+
+As capturas abaixo foram organizadas em `docs/screenshots/`. Elas documentam a interface demonstrativa, as consultas de documentação Pluggy e a exploração da Plaid Sandbox.
+
+### Nexora Finance — interface e funcionalidades
+
+| Evidência | Descrição |
+| --- | --- |
+| ![Visão geral](./docs/screenshots/01-nexora-visao-geral.png) | Visão geral do painel financeiro. |
+| ![Gastos e tendência](./docs/screenshots/02-nexora-gastos-e-tendencia.png) | Visualização de gastos e tendência. |
+| ![Contas Pluggy](./docs/screenshots/03-nexora-contas-pluggy.png) | Contas demonstrativas carregadas pela integração Pluggy Sandbox. |
+| ![Transações Pluggy](./docs/screenshots/04-nexora-transacoes-pluggy.png) | Histórico de transações retornado pela Pluggy Sandbox. |
+| ![Resumo financeiro](./docs/screenshots/05-assistente-resumo-financeiro.png) | Resposta do assistente com resumo financeiro. |
+| ![Gastos por categoria](./docs/screenshots/06-assistente-gastos-por-categoria.png) | Resposta do assistente sobre gastos por categoria. |
+
+### Pluggy Docs MCP — pesquisa documental
+
+As imagens registram consultas à documentação oficial da Pluggy. O MCP utilizado nesta etapa é documental: as consultas não criam uma conexão bancária nem representam autorização de acesso a dados financeiros.
+
+- [Arquitetura, conceito de Item e endpoints Transactions](./docs/screenshots/08a-pluggy-arquitetura-item-endpoints.png)
+- [Lista de endpoints e respectivas finalidades](./docs/screenshots/08b-pluggy-lista-endpoints-transactions.png)
+- [Endpoint de listagem: método, caminho e parâmetros](./docs/screenshots/09a-pluggy-endpoint-parametros.png)
+- [Exemplo de consulta e paginação por cursor](./docs/screenshots/09b-pluggy-exemplo-paginacao.png)
+
+### Plaid Sandbox — exploração de dados sintéticos
+
+- [Contas e transações da Plaid Sandbox](./docs/screenshots/07-plaid-sandbox-contas-transacoes.png)
+
+A execução documentada utilizou a instituição First Platypus Bank (`ins_109508`), produto `transactions` e a persona Sandbox predefinida `user_transactions_dynamic`. Foram retornadas 7 contas e 327 transações em USD, no período de 03/08/2026 a 31/10/2026. Os dados são sintéticos e não representam movimentações bancárias reais. O access token não foi persistido para reutilização.
+
+> **Escopo das evidências:** as capturas comprovam as consultas documentais e execuções Sandbox descritas acima. Elas não comprovam, por si só, uma conexão Open Finance de produção, consentimento de usuário real ou publicação atualizada da aplicação.

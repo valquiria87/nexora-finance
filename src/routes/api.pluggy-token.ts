@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  createSessionToken,
   errorResponse,
   ownerCookie,
   pluggyTokenConfigError,
@@ -74,9 +75,16 @@ export const Route = createFileRoute("/api/pluggy-token")({
             );
           }
 
-          return new Response(JSON.stringify({ accessToken: tokenData.accessToken }), {
-            headers: { "content-type": "application/json", "set-cookie": await ownerCookie(owner) },
-          });
+          const sessionToken = await createSessionToken(owner);
+          return new Response(
+            JSON.stringify({ accessToken: tokenData.accessToken, sessionToken }),
+            {
+              headers: {
+                "content-type": "application/json",
+                "set-cookie": await ownerCookie(owner),
+              },
+            },
+          );
         } catch (error) {
           if (error instanceof PluggyError) return errorResponse(error);
           return Response.json(

@@ -90,8 +90,34 @@ export async function sessionIdentity(request: Request) {
   return crypto.randomUUID();
 }
 
+// SameSite=None + Partitioned keeps cookies working when the app runs inside an iframe.
+const COOKIE_ATTRS = "Path=/; HttpOnly; Secure; SameSite=None; Partitioned; Max-Age=2592000";
+
 export async function ownerCookie(owner: string) {
-  return `${OWNER_COOKIE}=${owner}.${await sign(owner)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`;
+  return `${OWNER_COOKIE}=${owner}.${await sign(owner)}; ${COOKIE_ATTRS}`;
+}
+
+/** Short-lived signed token binding a Connect Token request to its owner (cookie-independent). */
+export const SESSION_TOKEN_TTL_SECONDS = 15 * 60;
+
+export async function createSessionToken(owner: string, now = Date.now()) {
+  const exp = Math.floor(now / 1000) + SESSION_TOKEN_TTL_SECONDS;
+  return `${owner}.${exp}.${await sign(`st:${owner}:${exp}`)}`;
+}
+
+/** Returns the owner if the token is authentic and unexpired, otherwise null. */
+export async function verifySessionToken(token: unknown, now = Date.now()): Promise<string | null> {
+  if (typeof token !== "string" || token.length > 300) return null;
+  const [owner, expRaw, signature, extra] = token.split(".");
+  if (!owner || !expRaw || !signature || extra !== undefined) return null;
+  if (!/^[\w-]{1,100}$/.test(owner) || !/^\d{1,12}$/.test(expRaw)) return null;
+  const exp = Number(expRaw);
+  if (exp < Math.floor(now / 1000)) return null;
+  try {
+    return (await sign(`st:${owner}:${exp}`)) === signature ? owner : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function linkedItemId(request: Request): Promise<string | null> {
@@ -115,7 +141,7 @@ export async function linkedItemId(request: Request): Promise<string | null> {
 
 export async function sessionCookie(itemId: string, owner: string) {
   if (!/^[\w-]{1,100}$/.test(itemId)) throw new PluggyError("ID do item inválido.");
-  return `${COOKIE}=${itemId}.${owner}.${await sign(`${itemId}:${owner}`)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`;
+  return `${COOKIE}=${itemId}.${owner}.${await sign(`${itemId}:${owner}`)}; ${COOKIE_ATTRS}`;
 }
 
 export const clearSessionCookie = `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
@@ -147,6 +173,10 @@ export type PluggyTransaction = {
   category?: string | null;
   status?: string;
   type?: string;
+  operationType?: string | null;
+  operationTypeAdditionalInfo?: string | null;
+  descriptionRaw?: string | null;
+  creditCardMetadata?: Record<string, unknown> | null;
 };
 
 async function paged<T>(path: string, maxPages = 10): Promise<T[]> {

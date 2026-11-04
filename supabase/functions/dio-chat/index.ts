@@ -283,12 +283,52 @@ function balancesAnswer(s: Snapshot): { text: string; registros: number } {
     (a) =>
       `| ${cell(a.name)} | ${money(a.balances.current, currencyOf(a.balances))} | ${money(a.balances.available, currencyOf(a.balances))} |`,
   );
+
   const debt = s.accounts.filter(isDebtAccount);
   const debtRows = debt.map(
     (a) => `| ${cell(a.name)} | ${money(a.balances.current, currencyOf(a.balances))} |`,
   );
+
+  // Agrupa por moeda para nunca somar valores de moedas diferentes.
+  const sumByCurrency = (
+    accounts: PlaidAccount[],
+    getValue: (account: PlaidAccount) => number | null,
+  ): Array<[string, number]> => {
+    const totals = new Map<string, number>();
+
+    for (const account of accounts) {
+      const currency = currencyOf(account.balances);
+      const value = getValue(account);
+      if (currency && value !== null) {
+        totals.set(currency, (totals.get(currency) ?? 0) + value);
+      }
+    }
+
+    return [...totals.entries()];
+  };
+
+  const availableTotals = sumByCurrency(
+    liquid,
+    (account) => account.balances.available,
+  );
+  const debtTotals = sumByCurrency(
+    debt,
+    (account) => account.balances.current,
+  );
+
+  const totalRows = [
+    ...availableTotals.map(
+      ([currency, total]) =>
+        `| Total disponível (${currency}) | ${money(total, currency)} |`,
+    ),
+    ...debtTotals.map(
+      ([currency, total]) =>
+        `| Total das dívidas (${currency}) | ${money(total, currency)} |`,
+    ),
+  ];
+
   const text = [
-    "Aqui estão os saldos das contas de depósito e as dívidas, **sempre separados**. Dados fictícios.",
+    "Aqui estão os saldos das contas de depósito e as dívidas, sempre separados. Dados fictícios.",
     "",
     "| Conta de depósito | Saldo atual | Disponível |",
     "| --- | --- | --- |",
@@ -298,8 +338,15 @@ function balancesAnswer(s: Snapshot): { text: string; registros: number } {
     "| --- | --- |",
     ...debtRows,
     "",
-    "_Dívida não é dinheiro disponível. Valores em USD, como recebidos da Plaid (sem conversão)._",
+    "**Totais separados:**",
+    "",
+    "| Indicador | Valor |",
+    "| --- | --- |",
+    ...totalRows,
+    "",
+    "_Dívida não é dinheiro disponível. Valores conforme recebidos da Plaid, sem conversão._",
   ].join("\n");
+
   return { text, registros: liquid.length + debt.length };
 }
 
@@ -446,11 +493,24 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ erro: "Use o método POST." }, 405);
 
-  let body: { mensagem?: unknown; historico?: unknown };
+  let body: { mensagem?: unknown; historico?: unknown; acao?: unknown };
   try {
     body = await req.json();
   } catch {
     return json({ erro: "O pedido não contém JSON válido." }, 400);
+  }
+
+  const acao = body.acao === "snapshot" ? "snapshot" : "chat";
+  if (acao === "snapshot") {
+    try {
+      const snap = await loadSnapshot();
+      return json({ snapshot: { accounts: snap.accounts, transactions: snap.transactions, inicio: snap.inicio, fim: snap.fim }, fonte: FONTE });
+    } catch (e) {
+      if (e instanceof UserFacingError) return json({ erro: e.message });
+      const code = (e as { plaidCode?: string }).plaidCode;
+      console.error(JSON.stringify({ event: "dio_chat_snapshot_failure", code: code ?? "unknown" }));
+      return json({ erro: "Não foi possível consultar a Plaid Sandbox agora. Tente novamente." }, 502);
+    }
   }
 
   const mensagem = typeof body.mensagem === "string" ? body.mensagem.trim() : "";
