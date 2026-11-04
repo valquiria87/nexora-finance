@@ -84,7 +84,6 @@ describe("sumTransactionsByCurrency", () => {
   });
 });
 
-
 describe("routeIntent", () => {
   it("prioriza resumo geral quando também menciona categorias de despesas", () => {
     expect(
