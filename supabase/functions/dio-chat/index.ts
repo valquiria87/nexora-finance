@@ -1,5 +1,6 @@
 import {
   analyzeTransactions,
+  classifyBalanceAccounts,
   dispatchChatIntent,
   requestedRecentLimit,
   routeIntent,
@@ -246,7 +247,7 @@ function describeWindow(s: Snapshot, n: number): string {
 
 function accountsAnswer(s: Snapshot): { text: string; registros: number } {
   const cash = s.accounts.filter((a) => !isDebtAccount(a));
-  const debt = s.accounts.filter(isDebtAccount);
+  const debt = groups.debts;
 
   const cashRows = cash.map(
     (a) =>
@@ -278,15 +279,18 @@ function accountsAnswer(s: Snapshot): { text: string; registros: number } {
 }
 
 function balancesAnswer(s: Snapshot): { text: string; registros: number } {
-  const liquid = s.accounts.filter(
-    (a) => a.type === "depository" && a.balances.available !== null,
-  );
+  const groups = classifyBalanceAccounts(s.accounts);
+  const liquid = groups.deposits;
+  const investments = groups.investments;
   const rows = liquid.map(
     (a) =>
       `| ${cell(a.name)} | ${money(a.balances.current, currencyOf(a.balances))} | ${money(a.balances.available, currencyOf(a.balances))} |`,
   );
 
   const debt = s.accounts.filter(isDebtAccount);
+  const investmentRows = investments.map(
+    (a) => `| ${cell(a.name)} | ${typeLabel(a)} | ${money(a.balances.current, currencyOf(a.balances))} |`,
+  );
   const debtRows = debt.map(
     (a) => `| ${cell(a.name)} | ${money(a.balances.current, currencyOf(a.balances))} |`,
   );
@@ -336,6 +340,12 @@ function balancesAnswer(s: Snapshot): { text: string; registros: number } {
     "| --- | --- | --- |",
     ...rows,
     "",
+    "**Investimentos e aposentadoria**",
+    "",
+    "| Conta | Tipo | Saldo atual |",
+    "| --- | --- | --- |",
+    ...investmentRows,
+    "",
     "| Cartões e empréstimos | Dívida atual |",
     "| --- | --- |",
     ...debtRows,
@@ -349,7 +359,7 @@ function balancesAnswer(s: Snapshot): { text: string; registros: number } {
     "_Dívida não é dinheiro disponível. Valores conforme recebidos da Plaid, sem conversão._",
   ].join("\n");
 
-  return { text, registros: liquid.length + debt.length };
+  return { text, registros: liquid.length + investments.length + debt.length };
 }
 
 function recentAnswer(s: Snapshot, limit = 5): { text: string; registros: number } {
