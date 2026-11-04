@@ -1,4 +1,11 @@
-import { analyzeTransactions, dispatchChatIntent, routeIntent, sumTransactionsByCurrency } from "./category-analysis.ts";
+import {
+  analyzeTransactions,
+  dispatchChatIntent,
+  requestedRecentLimit,
+  routeIntent,
+  selectRecentTransactions,
+  sumTransactionsByCurrency,
+} from "./category-analysis.ts";
 // Supabase Edge Function (Deno): dio-chat
 // Recebe { mensagem, historico } e responde { resposta, modo, meta } ou { erro }.
 // Lê contas e transações FICTÍCIAS da Plaid Sandbox (https://sandbox.plaid.com).
@@ -345,10 +352,9 @@ function balancesAnswer(s: Snapshot): { text: string; registros: number } {
   return { text, registros: liquid.length + debt.length };
 }
 
-function recentAnswer(s: Snapshot): { text: string; registros: number } {
+function recentAnswer(s: Snapshot, limit = 5): { text: string; registros: number } {
   const byId = new Map(s.accounts.map((a) => [a.account_id, a.name]));
-  const sorted = [...s.transactions].sort((a, b) => b.date.localeCompare(a.date));
-  const top = sorted.slice(0, 5);
+  const top = selectRecentTransactions(s.transactions, limit);
   if (top.length === 0) {
     return {
       text: `Não encontrei transações no período consultado.\n\n${describeWindow(s, 0)}`,
@@ -359,10 +365,13 @@ function recentAnswer(s: Snapshot): { text: string; registros: number } {
     const out = t.amount > 0;
     return `| ${dateBR(t.date)} | ${cell(t.merchant_name ?? t.name)} | ${cell(byId.get(t.account_id) ?? "Não informado")} | ${out ? "Saída" : "Entrada"} | ${money(Math.abs(t.amount), currencyOf(t))} | ${t.pending ? "Pendente" : "Confirmada"} |`;
   });
+  const intro = top.length < limit
+    ? `Estas são as **${top.length} transações** encontradas no período:`
+    : s.transactions.length > top.length
+      ? `Estas são as **${top.length} transações mais recentes** (de ${s.transactions.length} encontradas no período):`
+      : `Estas são as **${top.length} transações mais recentes**:`;
   const text = [
-    top.length < 5
-      ? `Estas são as **${top.length} transações** encontradas no período:`
-      : "Estas são as **5 transações mais recentes** (o período tem mais registros; mostro só estas):",
+    intro,
     "",
     "| Data | Descrição | Conta | Tipo | Valor | Situação |",
     "| --- | --- | --- | --- | --- | --- |",
@@ -446,7 +455,7 @@ function incomeAnswer(s: Snapshot): { text: string; registros: number } {
     "_Na Plaid, valores negativos representam entradas. Transações pendentes e saídas não entram nestes totais; moedas diferentes não são somadas._",
     "",
     describeWindow(s, s.transactions.length),
-  ].join("\\n");
+  ].join("\n");
   return { text, registros: s.transactions.length };
 }
 
@@ -550,7 +559,7 @@ Deno.serve(async (req) => {
     const out = dispatchChatIntent(intent, {
       contas: () => accountsAnswer(snap),
       saldos: () => balancesAnswer(snap),
-      recentes: () => recentAnswer(snap),
+      recentes: () => recentAnswer(snap, requestedRecentLimit(mensagem)),
       entradas: () => incomeAnswer(snap),
       categoria: () => categoryAnswer(snap, mensagem),
       resumo: () => summaryAnswer(snap),
