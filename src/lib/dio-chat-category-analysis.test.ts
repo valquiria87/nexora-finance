@@ -134,3 +134,31 @@ describe("routeIntent", () => {
     expect(routeIntent("Mostre meus gastos por categoria.")).toBe("categoria");
   });
 });
+
+
+describe("recent transaction limits", () => {
+  it("uses five transactions by default and reads explicit requested counts", () => {
+    expect(requestedRecentLimit("Mostre minhas últimas transações.")).toBe(5);
+    expect(requestedRecentLimit("Mostre exatamente 10 transações.")).toBe(10);
+    expect(requestedRecentLimit("Mostre as últimas 8.")).toBe(8);
+    expect(requestedRecentLimit("Mostre 12 últimas transações.")).toBe(12);
+  });
+
+  it("caps unusually large requests at twenty and ignores zero", () => {
+    expect(requestedRecentLimit("Mostre 99 transações.")).toBe(20);
+    expect(requestedRecentLimit("Mostre 0 transações.")).toBe(5);
+  });
+
+  it("returns the requested number in newest-first order without mutating the source", () => {
+    const transactions = [
+      { id: "old", date: "2026-10-01" },
+      { id: "newest", date: "2026-10-26" },
+      { id: "middle", date: "2026-10-20" },
+    ];
+    expect(selectRecentTransactions(transactions, 2).map((item) => item.id)).toEqual([
+      "newest",
+      "middle",
+    ]);
+    expect(transactions.map((item) => item.id)).toEqual(["old", "newest", "middle"]);
+  });
+});
