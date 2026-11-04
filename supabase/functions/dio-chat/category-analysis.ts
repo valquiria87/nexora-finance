@@ -96,7 +96,7 @@ export function analyzeTransactions(
 export type ChatIntent = "contas" | "saldos" | "recentes" | "categoria" | "resumo" | "ajuda";
 
 export function routeIntent(message: string): ChatIntent {
-  const normalized = message.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
+  const normalized = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
   // Resumo geral tem prioridade sobre termos secundários como "categorias".
   if (/resum|visao geral|panorama/.test(normalized)) {
