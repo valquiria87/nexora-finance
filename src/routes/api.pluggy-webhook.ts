@@ -1,12 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  handlePluggyWebhook,
-  verifyPluggyWebhookSecret,
-} from "@/lib/pluggy.server";
-import {
-  readJsonBodyLimited,
-  RequestBodyTooLargeError,
-} from "@/lib/request-security.server";
+import { handlePluggyWebhook, verifyPluggyWebhookSecret } from "@/lib/pluggy.server";
+import { readJsonBodyLimited, RequestBodyTooLargeError } from "@/lib/request-security.server";
 
 export const Route = createFileRoute("/api/pluggy-webhook")({
   server: {
