@@ -4,7 +4,11 @@ import { parseDioChatResponse, chatRequestSchema } from "@/lib/chat-contract";
 import { getDioChatStatus, isRetryableDioChatError } from "@/lib/dio-chat-retry";
 import { retry } from "@/lib/retry";
 import type { DioChatSuccess } from "@/lib/dio-chat.service";
-import { readJsonBodyLimited, RequestBodyTooLargeError, sameOriginGuard } from "@/lib/request-security.server";
+import {
+  readJsonBodyLimited,
+  RequestBodyTooLargeError,
+  sameOriginGuard,
+} from "@/lib/request-security.server";
 
 const MAX_ATTEMPTS = 3;
 const MAX_REQUEST_BYTES = 64 * 1024;
