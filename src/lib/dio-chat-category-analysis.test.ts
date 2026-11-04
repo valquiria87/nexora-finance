@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzeTransactions,
-  routeIntent,\n  sumTransactionsByCurrency,
+  routeIntent,
+  sumTransactionsByCurrency,
 } from "../../supabase/functions/dio-chat/category-analysis.ts";
 
 const labels = {
