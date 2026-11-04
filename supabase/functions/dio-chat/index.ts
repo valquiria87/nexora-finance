@@ -247,12 +247,7 @@ function describeWindow(s: Snapshot, n: number): string {
 
 function accountsAnswer(s: Snapshot): { text: string; registros: number } {
   const groups = classifyBalanceAccounts(s.accounts);
-  const otherAssets = s.accounts.filter(
-    (account) =>
-      account.type !== "depository" &&
-      account.type !== "investment" &&
-      !isDebtAccount(account),
-  );
+  const otherAssets = groups.otherAssets;
 
   const assetRows = (accounts: PlaidAccount[]) =>
     accounts.map(
