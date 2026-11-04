@@ -115,8 +115,28 @@ export function dispatchChatIntent<T>(intent: Exclude<ChatIntent, "ajuda">, hand
   }
 }
 
+export interface BalanceAccount {
+  type: string;
+  subtype: string | null;
+  balances: { available: number | null };
+}
+
+export function classifyBalanceAccounts<T extends BalanceAccount>(accounts: T[]) {
+  return {
+    deposits: accounts.filter((account) => account.type === "depository"),
+    investments: accounts.filter((account) => account.type === "investment"),
+    debts: accounts.filter((account) => account.type === "credit" || account.type === "loan"),
+  };
+}
+
 export function routeIntent(message: string): ChatIntent {
   const normalized = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  // Listagens explícitas de contas devem prevalecer sobre menções a saldo/tipo.
+  if (
+    /conta/.test(normalized) &&
+    /liste|listar|mostre|quais|todos|todas|tipos|incluindo/.test(normalized)
+  ) return "contas";
 
   // Resumo geral tem prioridade sobre termos secundários como "categorias".
   if (/resum|visao geral|panorama/.test(normalized)) {
