@@ -125,6 +125,8 @@ describe("routeIntent", () => {
     };
 
     const intent = routeIntent("Mostre minhas entradas confirmadas por moeda.");
+    expect(intent).toBe("entradas");
+    if (intent === "ajuda") throw new Error("A pergunta deveria ser reconhecida.");
     expect(dispatchChatIntent(intent, handlers)).toBe("incomeAnswer");
   });
 
