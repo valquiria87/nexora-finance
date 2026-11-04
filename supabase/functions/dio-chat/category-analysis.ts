@@ -118,7 +118,41 @@ export function dispatchChatIntent<T>(intent: Exclude<ChatIntent, "ajuda">, hand
 export interface BalanceAccount {
   type: string;
   subtype: string | null;
-  balances: { available: number | null };
+  balances: {
+    available: number | null;
+    current?: number | null;
+    limit?: number | null;
+    iso_currency_code?: string | null;
+    unofficial_currency_code?: string | null;
+  };
+}
+
+export interface AccountCurrencyTotal {
+  currency: string | null;
+  total: number;
+  count: number;
+  missingCount: number;
+}
+
+export function sumAccountsByCurrency<T extends BalanceAccount>(
+  accounts: T[],
+  getValue: (account: T) => number | null | undefined,
+): AccountCurrencyTotal[] {
+  const totals = new Map<string, AccountCurrencyTotal>();
+  for (const account of accounts) {
+    const currency = account.balances.iso_currency_code ?? account.balances.unofficial_currency_code ?? null;
+    const key = currency ?? "__NO_CURRENCY__";
+    const current = totals.get(key) ?? { currency, total: 0, count: 0, missingCount: 0 };
+    const value = getValue(account);
+    if (value === null || value === undefined || !Number.isFinite(value)) {
+      current.missingCount += 1;
+    } else {
+      current.total += value;
+      current.count += 1;
+    }
+    totals.set(key, current);
+  }
+  return [...totals.values()].sort((a, b) => (a.currency ?? "").localeCompare(b.currency ?? ""));
 }
 
 export function classifyBalanceAccounts<T extends BalanceAccount>(accounts: T[]) {
