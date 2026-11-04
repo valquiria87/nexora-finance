@@ -1,0 +1,93 @@
+export interface AnalyzableTransaction {
+  amount: number;
+  pending: boolean;
+  iso_currency_code: string | null;
+  unofficial_currency_code: string | null;
+  personal_finance_category?: { primary?: string } | null;
+}
+
+export interface CategoryTotal {
+  category: string;
+  currency: string | null;
+  count: number;
+  total: number;
+}
+
+export interface TransactionAnalysis {
+  categories: CategoryTotal[];
+  confirmedOutCount: number;
+  confirmedInCount: number;
+  pendingOutCount: number;
+  pendingInCount: number;
+  zeroAmountCount: number;
+}
+
+export function transactionCurrency(transaction: AnalyzableTransaction): string | null {
+  return transaction.iso_currency_code ?? transaction.unofficial_currency_code ?? null;
+}
+
+export function sumTransactionsByCurrency(
+  transactions: AnalyzableTransaction[],
+  predicate: (transaction: AnalyzableTransaction) => boolean,
+): Array<{ currency: string | null; total: number; count: number }> {
+  const groups = new Map<string, { currency: string | null; total: number; count: number }>();
+  for (const transaction of transactions.filter(predicate)) {
+    const currency = transactionCurrency(transaction);
+    const key = currency ?? "__NO_CURRENCY__";
+    const current = groups.get(key) ?? { currency, total: 0, count: 0 };
+    current.total += Math.abs(transaction.amount);
+    current.count += 1;
+    groups.set(key, current);
+  }
+  return [...groups.values()].sort((a, b) => (a.currency ?? "").localeCompare(b.currency ?? ""));
+}
+
+export function analyzeTransactions(
+  transactions: AnalyzableTransaction[],
+  categoryLabels: Record<string, string>,
+): TransactionAnalysis {
+  const categories = new Map<string, CategoryTotal>();
+  let confirmedOutCount = 0;
+  let confirmedInCount = 0;
+  let pendingOutCount = 0;
+  let pendingInCount = 0;
+  let zeroAmountCount = 0;
+
+  for (const transaction of transactions) {
+    if (transaction.amount === 0) {
+      zeroAmountCount += 1;
+      continue;
+    }
+    if (transaction.pending) {
+      if (transaction.amount > 0) pendingOutCount += 1;
+      else pendingInCount += 1;
+      continue;
+    }
+    if (transaction.amount < 0) {
+      confirmedInCount += 1;
+      continue;
+    }
+
+    confirmedOutCount += 1;
+    const primary = transaction.personal_finance_category?.primary;
+    const category = primary && categoryLabels[primary] ? categoryLabels[primary] : "Sem categoria informada";
+    const currency = transactionCurrency(transaction);
+    const key = `${category}\u0000${currency ?? "__NO_CURRENCY__"}`;
+    const current = categories.get(key) ?? { category, currency, count: 0, total: 0 };
+    current.count += 1;
+    current.total += transaction.amount;
+    categories.set(key, current);
+  }
+
+  return {
+    categories: [...categories.values()].sort((a, b) =>
+      a.category.localeCompare(b.category) ||
+      (a.currency ?? "").localeCompare(b.currency ?? ""),
+    ),
+    confirmedOutCount,
+    confirmedInCount,
+    pendingOutCount,
+    pendingInCount,
+    zeroAmountCount,
+  };
+}

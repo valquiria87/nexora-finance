@@ -1,3 +1,4 @@
+import { analyzeTransactions, sumTransactionsByCurrency } from "./category-analysis.ts";
 // Supabase Edge Function (Deno): dio-chat
 // Recebe { mensagem, historico } e responde { resposta, modo, meta } ou { erro }.
 // Lê contas e transações FICTÍCIAS da Plaid Sandbox (https://sandbox.plaid.com).
@@ -215,12 +216,6 @@ const CATEGORY_PT: Record<string, string> = {
   OTHER: "Outros",
 };
 
-function categoryOf(t: PlaidTx): string {
-  const key = t.personal_finance_category?.primary;
-  if (key && CATEGORY_PT[key]) return CATEGORY_PT[key];
-  return "Sem categoria informada";
-}
-
 const norm = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
@@ -380,48 +375,50 @@ function recentAnswer(s: Snapshot): { text: string; registros: number } {
   return { text, registros: s.transactions.length };
 }
 
-function categoryTotals(s: Snapshot) {
-  const confirmed = s.transactions.filter((t) => !t.pending && t.amount > 0);
-  const map = new Map<string, { n: number; total: number; cur: string | null }>();
-  for (const t of confirmed) {
-    const key = categoryOf(t);
-    const cur = map.get(key) ?? { n: 0, total: 0, cur: currencyOf(t) };
-    cur.n += 1;
-    cur.total += t.amount;
-    map.set(key, cur);
-  }
-  return [...map.entries()].sort((a, b) => b[1].total - a[1].total);
-}
-
 function categoryAnswer(s: Snapshot, message: string): { text: string; registros: number } {
-  const totals = categoryTotals(s);
+  const analysis = analyzeTransactions(s.transactions, CATEGORY_PT);
+  const totals = analysis.categories;
   const m = norm(message);
   const wanted = CATEGORY_HINTS.find(([re]) => re.test(m))?.[1];
-  const pending = s.transactions.filter((t) => t.pending).length;
-  const pendingNote = pending ? ` ${pending} pendentes ficaram fora dos totais.` : "";
+  const wantedRows = wanted ? totals.filter((row) => row.category === wanted) : [];
+  const wantedCount = wantedRows.reduce((sum, row) => sum + row.count, 0);
 
   const table = [
-    "| Categoria (Plaid) | Registros | Saídas confirmadas |",
-    "| --- | --- | --- |",
-    ...totals.map(([k, v]) => `| ${k} | ${v.n} | ${money(v.total, v.cur)} |`),
+    "| Categoria (Plaid) | Moeda | Registros | Saídas confirmadas |",
+    "| --- | --- | --- | --- |",
+    ...totals.map((row) => `| ${row.category} | ${row.currency ?? "Não informada"} | ${row.count} | ${money(row.total, row.currency)} |`),
   ];
 
   let intro: string;
   if (wanted) {
-    const hit = totals.find(([k]) => k === wanted);
-    intro = hit
-      ? `Em **${wanted}**, foram **${hit[1].n} ${hit[1].n === 1 ? "saída" : "saídas"}** somando **${money(hit[1].total, hit[1].cur)}** no período. Veja o quadro completo por categoria:`
+    intro = wantedCount
+      ? `Em **${wanted}**, foram **${wantedCount} ${wantedCount === 1 ? "saída confirmada" : "saídas confirmadas"}**, separadas por moeda. Veja o quadro completo:`
       : `Não encontrei saídas confirmadas em **${wanted}** no período. Veja as categorias que aparecem nos dados:`;
   } else {
-    intro = "Estas são as saídas confirmadas por categoria (categorias retornadas pela Plaid):";
+    intro = "Estas são as saídas confirmadas por categoria e moeda (categorias retornadas pela Plaid):";
   }
+
+  const reconciliation = [
+    "| Situação | Tipo | Registros |",
+    "| --- | --- | --- |",
+    `| Confirmada | Saída | ${analysis.confirmedOutCount} |`,
+    `| Confirmada | Entrada | ${analysis.confirmedInCount} |`,
+    `| Pendente | Saída | ${analysis.pendingOutCount} |`,
+    `| Pendente | Entrada | ${analysis.pendingInCount} |`,
+    `| Sem valor | Não classificado | ${analysis.zeroAmountCount} |`,
+    `| **Total recebido** | | **${s.transactions.length}** |`,
+  ];
 
   const text = [
     intro,
     "",
     ...table,
     "",
-    `_Transferências e pagamentos de dívidas podem ser movimentações entre contas, não consumo.${pendingNote}_`,
+    "**Conferência dos registros recebidos**",
+    "",
+    ...reconciliation,
+    "",
+    "_Entradas e pendências não entram nos totais de saídas confirmadas. Valores de moedas diferentes não são somados. Transferências e pagamentos de dívidas podem ser movimentações entre contas, não consumo._",
     "",
     describeWindow(s, s.transactions.length),
   ].join("\n");
@@ -429,31 +426,34 @@ function categoryAnswer(s: Snapshot, message: string): { text: string; registros
 }
 
 function summaryAnswer(s: Snapshot): { text: string; registros: number } {
-  const confirmed = s.transactions.filter((t) => !t.pending);
-  const outs = confirmed.filter((t) => t.amount > 0);
-  const ins = confirmed.filter((t) => t.amount < 0);
-  const sum = (xs: PlaidTx[]) => xs.reduce((acc, t) => acc + Math.abs(t.amount), 0);
-  const cur = currencyOf(s.transactions[0] ?? { iso_currency_code: "USD", unofficial_currency_code: null });
-  const top = categoryTotals(s).slice(0, 3);
-  const pending = s.transactions.length - confirmed.length;
+  const analysis = analyzeTransactions(s.transactions, CATEGORY_PT);
+  const confirmedOut = sumTransactionsByCurrency(s.transactions, (t) => !t.pending && t.amount > 0);
+  const confirmedIn = sumTransactionsByCurrency(s.transactions, (t) => !t.pending && t.amount < 0);
+  const top = [...analysis.categories].sort((a, b) => b.total - a.total).slice(0, 3);
+
+  const currencyRows = (label: string, rows: Array<{ currency: string | null; total: number; count: number }>) =>
+    rows.length
+      ? rows.map((row) => `| ${label} (${row.currency ?? "moeda não informada"}) | ${row.count} | ${money(row.total, row.currency)} |`)
+      : [`| ${label} | 0 | Não informado |`];
 
   const text = [
     "Resumo das movimentações do período (**dados fictícios**):",
     "",
-    "| Indicador | Resultado |",
-    "| --- | --- |",
-    `| Transações confirmadas | ${confirmed.length} |`,
-    `| Pendentes (fora dos totais) | ${pending} |`,
-    `| Entradas confirmadas | ${money(sum(ins), cur)} |`,
-    `| Saídas confirmadas | ${money(sum(outs), cur)} |`,
+    "| Indicador | Registros | Valor |",
+    "| --- | --- | --- |",
+    `| Transações confirmadas | ${analysis.confirmedOutCount + analysis.confirmedInCount} | — |`,
+    `| Pendentes | ${analysis.pendingOutCount + analysis.pendingInCount} | — |`,
+    `| Sem valor | ${analysis.zeroAmountCount} | — |`,
+    ...currencyRows("Entradas confirmadas", confirmedIn),
+    ...currencyRows("Saídas confirmadas", confirmedOut),
     "",
     "**Três maiores categorias de saída**",
     "",
-    "| Categoria | Registros | Saídas |",
-    "| --- | --- | --- |",
-    ...top.map(([k, v]) => `| ${k} | ${v.n} | ${money(v.total, v.cur)} |`),
+    "| Categoria | Moeda | Registros | Saídas |",
+    "| --- | --- | --- | --- |",
+    ...top.map((row) => `| ${row.category} | ${row.currency ?? "Não informada"} | ${row.count} | ${money(row.total, row.currency)} |`),
     "",
-    "_Os totais incluem transferências e pagamentos de dívidas; não equivalem a renda e consumo._",
+    "_Os totais incluem transferências e pagamentos de dívidas; não equivalem a renda e consumo. Moedas diferentes permanecem separadas._",
     "",
     describeWindow(s, s.transactions.length),
   ].join("\n");
