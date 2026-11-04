@@ -93,7 +93,7 @@ export function analyzeTransactions(
 }
 
 
-export type ChatIntent = "contas" | "saldos" | "recentes" | "categoria" | "resumo" | "ajuda";
+export type ChatIntent = "contas" | "saldos" | "recentes" | "entradas" | "categoria" | "resumo" | "ajuda";
 
 export function routeIntent(message: string): ChatIntent {
   const normalized = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -102,6 +102,7 @@ export function routeIntent(message: string): ChatIntent {
   if (/resum|visao geral|panorama/.test(normalized)) {
     return /conta/.test(normalized) ? "contas" : "resumo";
   }
+  if (/entrad|receit|credito recebido|dinheiro recebido|deposito recebido/.test(normalized)) return "entradas";
   if (/gast|categoria|aliment|transporte|viage|compras|lazer/.test(normalized)) return "categoria";
   if (/saldo|disponivel|divida|limite|quanto tenho/.test(normalized)) return "saldos";
   if (/ultima|recente|extrato|transac|movimentac/.test(normalized)) return "recentes";
