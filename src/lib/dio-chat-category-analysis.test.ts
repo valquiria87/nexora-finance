@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzeTransactions,
-  sumTransactionsByCurrency,
+  routeIntent,\n  sumTransactionsByCurrency,
 } from "../../supabase/functions/dio-chat/category-analysis.ts";
 
 const labels = {
@@ -80,5 +80,20 @@ describe("sumTransactionsByCurrency", () => {
       { currency: "BRL", total: 20, count: 1 },
       { currency: "USD", total: 10, count: 1 },
     ]);
+  });
+});
+
+
+describe("routeIntent", () => {
+  it("prioriza resumo geral quando também menciona categorias de despesas", () => {
+    expect(
+      routeIntent(
+        "Faça um resumo geral das minhas movimentações, separando entradas, saídas e as três principais categorias de despesas.",
+      ),
+    ).toBe("resumo");
+  });
+
+  it("mantém perguntas específicas de gastos na rota de categorias", () => {
+    expect(routeIntent("Mostre meus gastos por categoria.")).toBe("categoria");
   });
 });
