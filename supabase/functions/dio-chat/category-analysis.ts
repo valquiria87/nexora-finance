@@ -129,3 +129,27 @@ export function routeIntent(message: string): ChatIntent {
   if (/conta|banco|cartao/.test(normalized)) return "contas";
   return "ajuda";
 }
+
+
+/**
+ * Reads an explicit recent-transaction count from the user's message.
+ * Defaults to five and caps requests at twenty to keep chat responses concise.
+ */
+export function requestedRecentLimit(message: string, defaultLimit = 5, maxLimit = 20): number {
+  const normalized = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const match =
+    normalized.match(/\b(?:ultimas?|recentes?)\s+(\d{1,2})\b/) ??
+    normalized.match(/\b(\d{1,2})\s+(?:ultimas?|recentes?|transacoes?)\b/);
+  const requested = match ? Number(match[1]) : defaultLimit;
+  if (!Number.isInteger(requested) || requested < 1) return defaultLimit;
+  return Math.min(requested, maxLimit);
+}
+
+export function selectRecentTransactions<T extends { date: string }>(
+  transactions: T[],
+  limit = 5,
+): T[] {
+  return [...transactions]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, limit);
+}
