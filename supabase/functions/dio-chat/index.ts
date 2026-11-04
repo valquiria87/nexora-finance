@@ -425,6 +425,31 @@ function categoryAnswer(s: Snapshot, message: string): { text: string; registros
   return { text, registros: s.transactions.length };
 }
 
+function incomeAnswer(s: Snapshot): { text: string; registros: number } {
+  const entries = sumTransactionsByCurrency(
+    s.transactions,
+    (transaction) => !transaction.pending && transaction.amount < 0,
+  );
+  const rows = entries.map(
+    (row) =>
+      `| ${row.currency ?? "Moeda não informada"} | ${row.count} | ${money(row.total, row.currency)} |`,
+  );
+  const text = [
+    entries.length
+      ? "Estas são as **entradas confirmadas**, agrupadas por moeda:"
+      : "Não encontrei entradas confirmadas no período consultado.",
+    "",
+    "| Moeda | Registros | Entradas confirmadas |",
+    "| --- | --- | --- |",
+    ...rows,
+    "",
+    "_Na Plaid, valores negativos representam entradas. Transações pendentes e saídas não entram nestes totais; moedas diferentes não são somadas._",
+    "",
+    describeWindow(s, s.transactions.length),
+  ].join("\\n");
+  return { text, registros: s.transactions.length };
+}
+
 function summaryAnswer(s: Snapshot): { text: string; registros: number } {
   const analysis = analyzeTransactions(s.transactions, CATEGORY_PT);
   const confirmedOut = sumTransactionsByCurrency(s.transactions, (t) => !t.pending && t.amount > 0);
