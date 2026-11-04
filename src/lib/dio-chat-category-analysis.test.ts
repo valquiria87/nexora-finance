@@ -75,6 +75,21 @@ describe("analyzeTransactions", () => {
 });
 
 describe("sumTransactionsByCurrency", () => {
+  it("soma apenas entradas confirmadas por moeda quando filtradas", () => {
+    const transactions = [
+      tx(-10, "USD"),
+      tx(-20, "BRL"),
+      tx(-5, "USD", { pending: true }),
+      tx(7, "USD"),
+    ];
+    expect(
+      sumTransactionsByCurrency(transactions, (item) => !item.pending && item.amount < 0),
+    ).toEqual([
+      { currency: "BRL", total: 20, count: 1 },
+      { currency: "USD", total: 10, count: 1 },
+    ]);
+  });
+
   it("separa entradas e saídas por moeda", () => {
     const transactions = [tx(-10, "USD"), tx(-20, "BRL"), tx(7, "USD")];
     expect(sumTransactionsByCurrency(transactions, (item) => item.amount < 0)).toEqual([
@@ -91,6 +106,11 @@ describe("routeIntent", () => {
         "Faça um resumo geral das minhas movimentações, separando entradas, saídas e as três principais categorias de despesas.",
       ),
     ).toBe("resumo");
+  });
+
+  it("reconhece perguntas sobre entradas confirmadas", () => {
+    expect(routeIntent("Mostre minhas entradas confirmadas por moeda.")).toBe("entradas");
+    expect(routeIntent("Quais receitas foram recebidas?")).toBe("entradas");
   });
 
   it("mantém perguntas específicas de gastos na rota de categorias", () => {
