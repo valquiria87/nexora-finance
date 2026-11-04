@@ -26,9 +26,11 @@ export const Route = createFileRoute("/api/pluggy-webhook")({
           return Response.json({ error: "JSON do webhook malformado." }, { status: 400 });
         }
 
+        const forwardedHeaders = new Headers(request.headers);
+        forwardedHeaders.delete("content-length");
         const forwarded = new Request(request.url, {
           method: "POST",
-          headers: request.headers,
+          headers: forwardedHeaders,
           body: JSON.stringify(payload),
         });
         return handlePluggyWebhook(forwarded);
