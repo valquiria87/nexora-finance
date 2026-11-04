@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeTransactions,
   dispatchChatIntent,
+  requestedRecentLimit,
   routeIntent,
+  selectRecentTransactions,
   sumTransactionsByCurrency,
 } from "../../supabase/functions/dio-chat/category-analysis.ts";
 
