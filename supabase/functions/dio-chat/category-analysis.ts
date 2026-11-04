@@ -95,6 +95,26 @@ export function analyzeTransactions(
 
 export type ChatIntent = "contas" | "saldos" | "recentes" | "entradas" | "categoria" | "resumo" | "ajuda";
 
+export type ChatIntentHandlers<T> = {
+  contas: () => T;
+  saldos: () => T;
+  recentes: () => T;
+  entradas: () => T;
+  categoria: () => T;
+  resumo: () => T;
+};
+
+export function dispatchChatIntent<T>(intent: Exclude<ChatIntent, "ajuda">, handlers: ChatIntentHandlers<T>): T {
+  switch (intent) {
+    case "contas": return handlers.contas();
+    case "saldos": return handlers.saldos();
+    case "recentes": return handlers.recentes();
+    case "entradas": return handlers.entradas();
+    case "categoria": return handlers.categoria();
+    case "resumo": return handlers.resumo();
+  }
+}
+
 export function routeIntent(message: string): ChatIntent {
   const normalized = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
