@@ -227,18 +227,26 @@ export function ChatMessage({ msg, onRetry }: { msg: Msg; onRetry?: (message: Ms
         {msg.mode && msg.mode !== "demo" && msg.meta && (
           <div className="mt-3 space-y-1 text-xs text-muted-foreground">
             <p className="inline-flex rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 font-medium text-primary">
-              Integração ativa · Plaid Sandbox · dados fictícios
+              {msg.meta.fonte.toLowerCase().includes("pluggy")
+                ? "Integração ativa · Pluggy Sandbox · dados fictícios"
+                : "Integração ativa · Plaid Sandbox · dados fictícios"}
             </p>
             <p className="inline-flex rounded-full bg-muted px-2.5 py-1">
               {msg.mode === "claude" ? "Respostas com IA" : "Respostas por regras"}
             </p>
             <p>
-              Período:{" "}
+              Período das transações recebidas:{" "}
               {msg.meta.periodo
                 ? `${formatPeriodDate(msg.meta.periodo.inicio)} a ${formatPeriodDate(msg.meta.periodo.fim)}`
                 : "não informado"}{" "}
               · {msg.meta.registros} registros · Fonte: {msg.meta.fonte}
             </p>
+            {msg.meta.fonte.toLowerCase().includes("pluggy") && (
+              <p className="max-w-2xl text-[11px] leading-relaxed">
+                Este intervalo representa apenas os registros retornados pela Pluggy e não garante
+                que todo o histórico bancário esteja incluído.
+              </p>
+            )}
           </div>
         )}
       </div>

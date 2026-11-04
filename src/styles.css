@@ -556,6 +556,64 @@
   border-radius: inherit;
   background: var(--primary);
 }
+.nexora-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 18px;
+  margin: 8px 0 24px;
+}
+.nexora-chart-card,
+.nexora-monthly-chart {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--card) 94%, var(--muted));
+}
+.nexora-chart-caption {
+  margin: 0 0 8px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 650;
+}
+.nexora-chart {
+  width: 100%;
+  min-width: 0;
+}
+.nexora-chart-legend {
+  display: grid;
+  gap: 9px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.nexora-chart-legend li,
+.nexora-chart-legend li > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+}
+.nexora-chart-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 7px;
+  border-radius: 50%;
+}
+.nexora-chart-legend strong {
+  font-variant-numeric: tabular-nums;
+}
+.nexora-monthly-charts {
+  display: grid;
+  gap: 16px;
+  margin-top: 14px;
+}
+.nexora-monthly-chart [role="img"] {
+  width: 100%;
+  min-width: 0;
+}
 .nexora-footnote {
   margin-top: 20px;
 }
@@ -896,5 +954,231 @@
 @media (max-width: 760px) {
   .nexora-demo-inline {
     display: none;
+  }
+}
+
+/* Accounts section cards */
+.nexora-account-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr));
+  gap: 16px;
+}
+.nexora-account-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--card) 88%, var(--muted)),
+    var(--card) 72%
+  );
+  box-shadow: var(--shadow-soft);
+}
+.nexora-account-card.is-cash {
+  border-top: 2px solid var(--primary);
+}
+.nexora-account-card.is-credit {
+  border-top: 2px solid oklch(0.72 0.13 75);
+}
+.nexora-account-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nexora-account-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--muted);
+  color: var(--primary);
+}
+.nexora-account-card.is-credit .nexora-account-icon {
+  color: oklch(0.78 0.13 75);
+}
+.nexora-account-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.nexora-account-type {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 650;
+}
+.nexora-account-identity h3 {
+  margin: 0;
+  font: 600 17px/1.3 var(--font-display);
+  letter-spacing: -0.025em;
+}
+.nexora-account-identity p {
+  margin: 6px 0 0;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.nexora-account-balance {
+  display: grid;
+  gap: 7px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border);
+}
+.nexora-account-balance span,
+.nexora-account-credit span {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.nexora-account-balance strong {
+  overflow-wrap: anywhere;
+  font: 600 clamp(24px, 2.5vw, 30px)/1.2 var(--font-display);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.nexora-account-card.is-cash .nexora-account-balance strong {
+  color: var(--primary);
+}
+.nexora-account-credit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--muted) 68%, transparent);
+}
+.nexora-account-credit strong {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 420px) {
+  .nexora-account-card {
+    padding: 18px;
+  }
+  .nexora-account-credit {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+}
+
+/* Transaction statement table */
+.nexora-transactions-table-wrap {
+  width: 100%;
+  max-height: min(72vh, 820px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  scrollbar-width: thin;
+}
+.nexora-transactions-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  font-size: 12px;
+}
+.nexora-transactions-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.nexora-transactions-table th {
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.nexora-transactions-table td {
+  padding: 10px 15px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: var(--card);
+  vertical-align: middle;
+}
+.nexora-transactions-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.nexora-transactions-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--muted) 45%, var(--card));
+}
+.nexora-transactions-table .nexora-transaction-date {
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.nexora-transaction-description {
+  min-width: 210px;
+  max-width: 340px;
+  color: var(--foreground);
+  font-weight: 650;
+}
+.nexora-category-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 190px;
+  padding: 4px 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nexora-transaction-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+}
+.nexora-transaction-kind svg {
+  width: 14px;
+  height: 14px;
+}
+.nexora-transaction-kind.is-outflow {
+  color: var(--destructive);
+}
+.nexora-transaction-kind.is-inflow {
+  color: var(--primary);
+}
+.nexora-transactions-table .nexora-transaction-amount {
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.nexora-transactions-table .is-numeric {
+  text-align: right;
+}
+@media (max-width: 640px) {
+  .nexora-transactions-table-wrap {
+    max-height: 68vh;
+  }
+  .nexora-transactions-table {
+    min-width: 680px;
+  }
+  .nexora-transactions-table th,
+  .nexora-transactions-table td {
+    padding: 10px 11px;
   }
 }

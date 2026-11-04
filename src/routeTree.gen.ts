@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiDioChatRouteImport } from './routes/api.dio-chat'
+import { Route as ApiPlaidDataRouteImport } from './routes/api.plaid-data'
 import { Route as ApiPluggyDataRouteImport } from './routes/api.pluggy-data'
+import { Route as ApiPluggyDiagnosticsRouteImport } from './routes/api.pluggy-diagnostics'
 import { Route as ApiPluggySessionRouteImport } from './routes/api.pluggy-session'
 import { Route as ApiPluggyTokenRouteImport } from './routes/api.pluggy-token'
 import { Route as ApiPluggyWebhookRouteImport } from './routes/api.pluggy-webhook'
@@ -26,9 +28,19 @@ const ApiDioChatRoute = ApiDioChatRouteImport.update({
   path: '/api/dio-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPlaidDataRoute = ApiPlaidDataRouteImport.update({
+  id: '/api/plaid-data',
+  path: '/api/plaid-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPluggyDataRoute = ApiPluggyDataRouteImport.update({
   id: '/api/pluggy-data',
   path: '/api/pluggy-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPluggyDiagnosticsRoute = ApiPluggyDiagnosticsRouteImport.update({
+  id: '/api/pluggy-diagnostics',
+  path: '/api/pluggy-diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPluggySessionRoute = ApiPluggySessionRouteImport.update({
@@ -50,7 +62,9 @@ const ApiPluggyWebhookRoute = ApiPluggyWebhookRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/dio-chat': typeof ApiDioChatRoute
+  '/api/plaid-data': typeof ApiPlaidDataRoute
   '/api/pluggy-data': typeof ApiPluggyDataRoute
+  '/api/pluggy-diagnostics': typeof ApiPluggyDiagnosticsRoute
   '/api/pluggy-session': typeof ApiPluggySessionRoute
   '/api/pluggy-token': typeof ApiPluggyTokenRoute
   '/api/pluggy-webhook': typeof ApiPluggyWebhookRoute
@@ -58,7 +72,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/dio-chat': typeof ApiDioChatRoute
+  '/api/plaid-data': typeof ApiPlaidDataRoute
   '/api/pluggy-data': typeof ApiPluggyDataRoute
+  '/api/pluggy-diagnostics': typeof ApiPluggyDiagnosticsRoute
   '/api/pluggy-session': typeof ApiPluggySessionRoute
   '/api/pluggy-token': typeof ApiPluggyTokenRoute
   '/api/pluggy-webhook': typeof ApiPluggyWebhookRoute
@@ -67,7 +83,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/dio-chat': typeof ApiDioChatRoute
+  '/api/plaid-data': typeof ApiPlaidDataRoute
   '/api/pluggy-data': typeof ApiPluggyDataRoute
+  '/api/pluggy-diagnostics': typeof ApiPluggyDiagnosticsRoute
   '/api/pluggy-session': typeof ApiPluggySessionRoute
   '/api/pluggy-token': typeof ApiPluggyTokenRoute
   '/api/pluggy-webhook': typeof ApiPluggyWebhookRoute
@@ -77,7 +95,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/api/dio-chat'
+    | '/api/plaid-data'
     | '/api/pluggy-data'
+    | '/api/pluggy-diagnostics'
     | '/api/pluggy-session'
     | '/api/pluggy-token'
     | '/api/pluggy-webhook'
@@ -85,7 +105,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/api/dio-chat'
+    | '/api/plaid-data'
     | '/api/pluggy-data'
+    | '/api/pluggy-diagnostics'
     | '/api/pluggy-session'
     | '/api/pluggy-token'
     | '/api/pluggy-webhook'
@@ -93,7 +115,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/api/dio-chat'
+    | '/api/plaid-data'
     | '/api/pluggy-data'
+    | '/api/pluggy-diagnostics'
     | '/api/pluggy-session'
     | '/api/pluggy-token'
     | '/api/pluggy-webhook'
@@ -102,7 +126,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiDioChatRoute: typeof ApiDioChatRoute
+  ApiPlaidDataRoute: typeof ApiPlaidDataRoute
   ApiPluggyDataRoute: typeof ApiPluggyDataRoute
+  ApiPluggyDiagnosticsRoute: typeof ApiPluggyDiagnosticsRoute
   ApiPluggySessionRoute: typeof ApiPluggySessionRoute
   ApiPluggyTokenRoute: typeof ApiPluggyTokenRoute
   ApiPluggyWebhookRoute: typeof ApiPluggyWebhookRoute
@@ -124,11 +150,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDioChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/plaid-data': {
+      id: '/api/plaid-data'
+      path: '/api/plaid-data'
+      fullPath: '/api/plaid-data'
+      preLoaderRoute: typeof ApiPlaidDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pluggy-data': {
       id: '/api/pluggy-data'
       path: '/api/pluggy-data'
       fullPath: '/api/pluggy-data'
       preLoaderRoute: typeof ApiPluggyDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pluggy-diagnostics': {
+      id: '/api/pluggy-diagnostics'
+      path: '/api/pluggy-diagnostics'
+      fullPath: '/api/pluggy-diagnostics'
+      preLoaderRoute: typeof ApiPluggyDiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/pluggy-session': {
@@ -158,7 +198,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiDioChatRoute: ApiDioChatRoute,
+  ApiPlaidDataRoute: ApiPlaidDataRoute,
   ApiPluggyDataRoute: ApiPluggyDataRoute,
+  ApiPluggyDiagnosticsRoute: ApiPluggyDiagnosticsRoute,
   ApiPluggySessionRoute: ApiPluggySessionRoute,
   ApiPluggyTokenRoute: ApiPluggyTokenRoute,
   ApiPluggyWebhookRoute: ApiPluggyWebhookRoute,

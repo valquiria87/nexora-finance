@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { sameOriginGuard } from "@/lib/request-security.server";
 import {
+  createSessionToken,
   errorResponse,
   ownerCookie,
   pluggyTokenConfigError,
@@ -11,6 +13,9 @@ export const Route = createFileRoute("/api/pluggy-token")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const originError = sameOriginGuard(request);
+        if (originError) return originError;
+
         const readinessError = pluggyTokenConfigError();
         if (readinessError)
           return Response.json({ error: readinessError.message }, { status: 503 });
@@ -74,9 +79,16 @@ export const Route = createFileRoute("/api/pluggy-token")({
             );
           }
 
-          return new Response(JSON.stringify({ accessToken: tokenData.accessToken }), {
-            headers: { "content-type": "application/json", "set-cookie": await ownerCookie(owner) },
-          });
+          const sessionToken = await createSessionToken(owner);
+          return new Response(
+            JSON.stringify({ accessToken: tokenData.accessToken, sessionToken }),
+            {
+              headers: {
+                "content-type": "application/json",
+                "set-cookie": await ownerCookie(owner),
+              },
+            },
+          );
         } catch (error) {
           if (error instanceof PluggyError) return errorResponse(error);
           return Response.json(

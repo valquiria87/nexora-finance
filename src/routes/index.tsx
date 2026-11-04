@@ -31,6 +31,11 @@ import { backendChatService } from "@/lib/chat-service";
 import { MAX_CHAT_MESSAGE_LENGTH } from "@/lib/chat-contract";
 import { categorizeTransaction } from "@/lib/categorization";
 import type { PluggyAccount, PluggyTransaction } from "@/lib/pluggy.server";
+import {
+  mapPlaidAccounts,
+  mapPlaidTransactions,
+  type PlaidSnapshotResponse,
+} from "@/lib/plaid-snapshot";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -95,12 +100,19 @@ function Index() {
     "overview",
   );
   const [pluggyToken, setPluggyToken] = useState<string | null>(null);
+  const [pluggySessionToken, setPluggySessionToken] = useState<string | null>(null);
+  const [savingConnection, setSavingConnection] = useState(false);
   const [pluggyAccounts, setPluggyAccounts] = useState<PluggyAccount[]>([]);
   const [pluggyTransactions, setPluggyTransactions] = useState<PluggyTransaction[]>([]);
   const [pluggyConnected, setPluggyConnected] = useState(false);
   const [pluggyStatus, setPluggyStatus] = useState<string | null>(null);
   const [pluggyInstitution, setPluggyInstitution] = useState<string | null>(null);
   const [pluggyLoading, setPluggyLoading] = useState(true);
+  const [plaidSnapshot, setPlaidSnapshot] = useState<PlaidSnapshotResponse["snapshot"] | null>(
+    null,
+  );
+  const [plaidLoading, setPlaidLoading] = useState(true);
+  const [plaidError, setPlaidError] = useState<string | null>(null);
   const [pluggyLoadError, setPluggyLoadError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
 
@@ -147,8 +159,29 @@ function Index() {
     }
   };
 
+  const loadPlaid = async () => {
+    setPlaidLoading(true);
+    setPlaidError(null);
+    try {
+      const response = await fetch("/api/plaid-data");
+      const data = (await response.json()) as PlaidSnapshotResponse | { error?: string };
+      if (!response.ok || !("snapshot" in data)) {
+        throw new Error(
+          ("error" in data && data.error) || "Não foi possível carregar a Plaid Sandbox.",
+        );
+      }
+      setPlaidSnapshot(data.snapshot);
+    } catch (cause) {
+      setPlaidSnapshot(null);
+      setPlaidError(cause instanceof Error ? cause.message : "Falha ao consultar Plaid Sandbox.");
+    } finally {
+      setPlaidLoading(false);
+    }
+  };
+
   useEffect(() => {
     void loadPluggy().catch(() => undefined);
+    void loadPlaid();
   }, []);
   const [PluggyConnectComponent, setPluggyConnectComponent] = useState<ComponentType<{
     connectToken: string;
@@ -221,6 +254,7 @@ function Index() {
 
       const data = (await response.json()) as {
         accessToken?: string;
+        sessionToken?: string;
         error?: string;
       };
 
@@ -239,6 +273,7 @@ function Index() {
             onClose: () => void;
           }>,
       );
+      setPluggySessionToken(data.sessionToken ?? null);
       setPluggyToken(data.accessToken);
     } catch (cause) {
       setError(
@@ -265,7 +300,29 @@ function Index() {
     );
     setTyping(true);
     try {
-      const result = await withTimeout(backendChatService.ask(question, history), CHAT_TIMEOUT_MS);
+      const result = pluggyConnected
+        ? {
+            resposta: answer(
+              question,
+              provider.getAccounts(),
+              provider.getTransactions(),
+              "pluggy",
+            ),
+            modo: "regras" as const,
+            meta: {
+              periodo: (() => {
+                const dates = provider
+                  .getTransactions()
+                  .map((transaction) => transaction.date.slice(0, 10))
+                  .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+                  .sort();
+                return dates.length ? { inicio: dates[0]!, fim: dates[dates.length - 1]! } : null;
+              })(),
+              registros: provider.getTransactions().length,
+              fonte: "Pluggy Sandbox · dados fictícios",
+            },
+          }
+        : await withTimeout(backendChatService.ask(question, history), CHAT_TIMEOUT_MS);
       const reply: Msg = {
         id: replaceAssistantId ?? uid(),
         role: "assistant",
@@ -295,8 +352,13 @@ function Index() {
       const reply: Msg = {
         id: replaceAssistantId ?? uid(),
         role: "assistant",
-        text: answer(question),
-        mode: "demo",
+        text: answer(
+          question,
+          provider.getAccounts(),
+          provider.getTransactions(),
+          pluggyConnected ? "pluggy" : "demo",
+        ),
+        mode: pluggyConnected ? "regras" : "demo",
         errorMessage,
         retryUserMessageId: userMessageId,
       };
@@ -391,7 +453,7 @@ function Index() {
               ? { available: account.balance }
               : {}),
             ...(account.type === "CREDIT" && account.balance != null
-              ? { debt: account.balance }
+              ? { debt: Math.abs(account.balance) }
               : {}),
             ...(account.creditData?.availableCreditLimit != null
               ? { availableCredit: account.creditData.availableCreditLimit }
@@ -405,17 +467,46 @@ function Index() {
             date: transaction.date.slice(0, 10),
             description: transaction.description?.trim() || "Movimentação",
             amount:
-              accountTypes.get(transaction.accountId) === "CREDIT"
-                ? transaction.amount
-                : -transaction.amount,
+              transaction.type === "DEBIT"
+                ? Math.abs(transaction.amount)
+                : transaction.type === "CREDIT"
+                  ? -Math.abs(transaction.amount)
+                  : accountTypes.get(transaction.accountId) === "CREDIT"
+                    ? transaction.amount
+                    : -transaction.amount,
             category:
               transaction.category?.trim() ||
               categorizeTransaction(transaction.description?.trim() || "Movimentação"),
+            ...(accountTypes.get(transaction.accountId) === "CREDIT" && transaction.type === "DEBIT"
+              ? { classification: "card-expense" as const }
+              : accountTypes.get(transaction.accountId) === "CREDIT" &&
+                  transaction.type === "CREDIT"
+                ? { classification: "card-unknown" as const }
+                : {}),
             ...(transaction.currencyCode ? { currency: transaction.currencyCode } : {}),
+            ...(transaction.operationType != null
+              ? { operationType: transaction.operationType }
+              : {}),
+            ...(transaction.operationTypeAdditionalInfo != null
+              ? { operationTypeAdditionalInfo: transaction.operationTypeAdditionalInfo }
+              : {}),
+            ...(transaction.descriptionRaw != null
+              ? { descriptionRaw: transaction.descriptionRaw }
+              : {}),
+            ...(transaction.creditCardMetadata != null
+              ? { creditCardMetadata: transaction.creditCardMetadata }
+              : {}),
           }));
         },
       }
-    : demoProvider;
+    : plaidSnapshot
+      ? {
+          mode: "plaid",
+          getAccounts: () => mapPlaidAccounts(plaidSnapshot.accounts),
+          getTransactions: () =>
+            mapPlaidTransactions(plaidSnapshot.transactions, plaidSnapshot.accounts),
+        }
+      : demoProvider;
 
   const disconnectBank = async () => {
     if (
@@ -565,7 +656,7 @@ function Index() {
             <p className="nexora-connection-copy">
               {pluggyConnected
                 ? /sandbox|dados sintéticos/i.test(pluggyStatus ?? "")
-                  ? "Sandbox conectado"
+                  ? "Pluggy Sandbox \u2014 dados fict\u00edcios"
                   : "Conectado"
                 : "Conecte sua conta para visualizar suas informações financeiras."}{" "}
             </p>
@@ -616,17 +707,21 @@ function Index() {
                 ? "Carregando suas informações…"
                 : section === "chat"
                   ? latestAssistant?.mode === "claude" || latestAssistant?.mode === "regras"
-                    ? "Integração ativa · Plaid Sandbox · dados fictícios"
+                    ? latestAssistant?.meta?.fonte.toLowerCase().includes("pluggy")
+                      ? "Integração ativa · Pluggy Sandbox · dados fictícios"
+                      : "Integração ativa · Plaid Sandbox · dados fictícios"
                     : latestAssistant?.mode === "demo"
                       ? "Modo demonstração (dados locais)"
                       : "Demonstração · Dados fictícios"
                   : pluggyConnected
                     ? /sandbox|dados sintéticos/i.test(pluggyStatus ?? "")
-                      ? "Sandbox conectado"
+                      ? "Pluggy Sandbox \u2014 dados fict\u00edcios"
                       : "Conectado"
-                    : pluggyLoadError
-                      ? "Conexão indisponível"
-                      : "Ambiente de demonstração"}
+                    : provider.mode === "plaid"
+                      ? "Plaid Sandbox · dados fictícios"
+                      : pluggyLoadError
+                        ? "Conexão indisponível"
+                        : "Ambiente de demonstração"}
             </span>
             {!pluggyConnected && pluggyLoadError && (
               <span className="nexora-demo-inline">Ambiente de demonstração</span>
@@ -662,8 +757,10 @@ function Index() {
             <Dashboard
               section={section}
               provider={provider}
-              institution={pluggyInstitution}
-              loading={pluggyLoading}
+              institution={
+                pluggyInstitution ?? (provider.mode === "plaid" ? "Plaid Sandbox" : null)
+              }
+              loading={pluggyLoading || (!pluggyConnected && plaidLoading)}
               error={null}
               onRefresh={() => void loadPluggy().catch(() => undefined)}
               onConnect={!pluggyConnected ? () => void connectBank() : undefined}
@@ -678,10 +775,19 @@ function Index() {
                 </p>
               </div>
               <div className="nexora-demo-banner">
-                <span className="nexora-demo-tag">Demonstração · Dados fictícios</span>
+                <span className="nexora-demo-tag">
+                  {provider.mode === "pluggy"
+                    ? "Pluggy Sandbox · Dados fictícios"
+                    : provider.mode === "plaid"
+                      ? "Plaid Sandbox · Dados fictícios"
+                      : "Demonstração · Dados fictícios"}
+                </span>
                 <span>
-                  A integração só será indicada após uma resposta bem-sucedida. Se ela falhar, o
-                  assistente usa os dados locais de demonstração.
+                  {provider.mode === "pluggy"
+                    ? "O assistente consulta as contas e movimentações recebidas da Pluggy. Respostas por regras, somente leitura."
+                    : provider.mode === "plaid"
+                      ? "O painel e o assistente usam o mesmo snapshot da Plaid Sandbox. Dados fictícios, somente leitura."
+                      : "Sem conexão bancária, o assistente usa os dados locais de demonstração."}
                 </span>
               </div>
               <div className="nexora-chat-thread">
@@ -768,11 +874,11 @@ function Index() {
             connectToken={pluggyToken}
             includeSandbox={true}
             onSuccess={({ item }: { item: { id: string } }) => {
-              setPluggyToken(null);
+              setSavingConnection(true);
               void fetch("/api/pluggy-session", {
                 method: "POST",
                 headers: { "content-type": "application/json" },
-                body: JSON.stringify({ itemId: item.id }),
+                body: JSON.stringify({ itemId: item.id, sessionToken: pluggySessionToken }),
               })
                 .then(async (response) => {
                   const data = (await response.json()) as { error?: string };
@@ -786,14 +892,35 @@ function Index() {
                   setError(
                     cause instanceof Error ? cause.message : "Não foi possível salvar a conexão.",
                   ),
-                );
+                )
+                .finally(() => {
+                  setSavingConnection(false);
+                  setPluggySessionToken(null);
+                  setPluggyToken(null);
+                });
             }}
             onError={() => {
+              if (savingConnection) return;
               setPluggyToken(null);
+              setPluggySessionToken(null);
               setError("A Pluggy não conseguiu concluir a conexão. Tente novamente.");
             }}
-            onClose={() => setPluggyToken(null)}
+            onClose={() => {
+              if (savingConnection) return;
+              setPluggyToken(null);
+              setPluggySessionToken(null);
+            }}
           />
+          {savingConnection && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-background/90"
+            >
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p className="text-sm font-medium text-foreground">Salvando conexão bancária...</p>
+            </div>
+          )}
         </div>
       )}
     </div>
