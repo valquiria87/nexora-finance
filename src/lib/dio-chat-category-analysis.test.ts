@@ -6,6 +6,7 @@ import {
   requestedRecentLimit,
   routeIntent,
   selectRecentTransactions,
+  sumAccountsByCurrency,
   sumTransactionsByCurrency,
 } from "../../supabase/functions/dio-chat/category-analysis.ts";
 
@@ -193,5 +194,25 @@ describe("recent transaction limits", () => {
       "middle",
     ]);
     expect(transactions.map((item) => item.id)).toEqual(["old", "newest", "middle"]);
+  });
+});
+
+
+describe("sumAccountsByCurrency", () => {
+  it("soma valores de contas por moeda e preserva valores ausentes", () => {
+    const accounts = [
+      { type: "depository", subtype: "checking", balances: { available: 100, current: 110, limit: null, iso_currency_code: "USD", unofficial_currency_code: null } },
+      { type: "depository", subtype: "cd", balances: { available: null, current: 1000, limit: null, iso_currency_code: "USD", unofficial_currency_code: null } },
+      { type: "investment", subtype: "ira", balances: { available: null, current: 320.76, limit: null, iso_currency_code: "USD", unofficial_currency_code: null } },
+      { type: "loan", subtype: "student", balances: { available: null, current: 500, limit: null, iso_currency_code: "BRL", unofficial_currency_code: null } },
+    ];
+    expect(sumAccountsByCurrency(accounts, (account) => account.balances.available)).toEqual([
+      { currency: "BRL", total: 0, count: 0, missingCount: 1 },
+      { currency: "USD", total: 100, count: 1, missingCount: 1 },
+    ]);
+    expect(sumAccountsByCurrency(accounts, (account) => account.balances.current)).toEqual([
+      { currency: "BRL", total: 500, count: 1, missingCount: 0 },
+      { currency: "USD", total: 1430.76, count: 3, missingCount: 0 },
+    ]);
   });
 });
