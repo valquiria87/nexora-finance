@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { sameOriginGuard } from "@/lib/request-security.server";
 import {
   createSessionToken,
   errorResponse,
@@ -12,6 +13,9 @@ export const Route = createFileRoute("/api/pluggy-token")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const originError = sameOriginGuard(request);
+        if (originError) return originError;
+
         const readinessError = pluggyTokenConfigError();
         if (readinessError)
           return Response.json({ error: readinessError.message }, { status: 503 });
