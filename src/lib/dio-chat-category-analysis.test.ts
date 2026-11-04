@@ -18,9 +18,7 @@ const tx = (
   pending: options.pending ?? false,
   iso_currency_code: currency,
   unofficial_currency_code: null,
-  personal_finance_category: options.category
-    ? { primary: options.category }
-    : null,
+  personal_finance_category: options.category ? { primary: options.category } : null,
 });
 
 describe("analyzeTransactions", () => {
@@ -77,14 +75,8 @@ describe("analyzeTransactions", () => {
 
 describe("sumTransactionsByCurrency", () => {
   it("separa entradas e saídas por moeda", () => {
-    const transactions = [
-      tx(-10, "USD"),
-      tx(-20, "BRL"),
-      tx(7, "USD"),
-    ];
-    expect(
-      sumTransactionsByCurrency(transactions, (item) => item.amount < 0),
-    ).toEqual([
+    const transactions = [tx(-10, "USD"), tx(-20, "BRL"), tx(7, "USD")];
+    expect(sumTransactionsByCurrency(transactions, (item) => item.amount < 0)).toEqual([
       { currency: "BRL", total: 20, count: 1 },
       { currency: "USD", total: 10, count: 1 },
     ]);
