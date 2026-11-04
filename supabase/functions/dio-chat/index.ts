@@ -1,4 +1,11 @@
-import { analyzeTransactions, dispatchChatIntent, requestedRecentLimit, routeIntent, selectRecentTransactions, sumTransactionsByCurrency } from "./category-analysis.ts";
+import {
+  analyzeTransactions,
+  dispatchChatIntent,
+  requestedRecentLimit,
+  routeIntent,
+  selectRecentTransactions,
+  sumTransactionsByCurrency,
+} from "./category-analysis.ts";
 // Supabase Edge Function (Deno): dio-chat
 // Recebe { mensagem, historico } e responde { resposta, modo, meta } ou { erro }.
 // Lê contas e transações FICTÍCIAS da Plaid Sandbox (https://sandbox.plaid.com).
