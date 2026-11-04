@@ -247,7 +247,7 @@ function describeWindow(s: Snapshot, n: number): string {
 
 function accountsAnswer(s: Snapshot): { text: string; registros: number } {
   const cash = s.accounts.filter((a) => !isDebtAccount(a));
-  const debt = groups.debts;
+  const debt = s.accounts.filter(isDebtAccount);
 
   const cashRows = cash.map(
     (a) =>
@@ -282,12 +282,12 @@ function balancesAnswer(s: Snapshot): { text: string; registros: number } {
   const groups = classifyBalanceAccounts(s.accounts);
   const liquid = groups.deposits;
   const investments = groups.investments;
+  const debt = groups.debts;
   const rows = liquid.map(
     (a) =>
       `| ${cell(a.name)} | ${money(a.balances.current, currencyOf(a.balances))} | ${money(a.balances.available, currencyOf(a.balances))} |`,
   );
 
-  const debt = s.accounts.filter(isDebtAccount);
   const investmentRows = investments.map(
     (a) => `| ${cell(a.name)} | ${typeLabel(a)} | ${money(a.balances.current, currencyOf(a.balances))} |`,
   );
