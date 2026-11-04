@@ -137,7 +137,6 @@ describe("routeIntent", () => {
   });
 });
 
-
 describe("recent transaction limits", () => {
   it("uses five transactions by default and reads explicit requested counts", () => {
     expect(requestedRecentLimit("Mostre minhas últimas transações.")).toBe(5);
