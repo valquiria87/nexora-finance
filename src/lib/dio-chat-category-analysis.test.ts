@@ -83,10 +83,7 @@ describe("sumTransactionsByCurrency", () => {
       tx(7, "USD"),
     ];
     expect(
-      sumTransactionsByCurrency(
-        transactions,
-        (item) => !item.pending && item.amount < 0,
-      ),
+      sumTransactionsByCurrency(transactions, (item) => !item.pending && item.amount < 0),
     ).toEqual([
       { currency: "BRL", total: 20, count: 1 },
       { currency: "USD", total: 10, count: 1 },
