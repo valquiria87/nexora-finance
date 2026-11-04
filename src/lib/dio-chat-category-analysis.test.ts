@@ -134,7 +134,9 @@ describe("routeIntent", () => {
   });
 
   it("prioriza a listagem completa de contas mesmo quando a pergunta menciona saldos e tipos", () => {
-    expect(routeIntent("Liste todas as contas e seus tipos e saldos, incluindo CD, IRA e 401(k).")).toBe("contas");
+    expect(
+      routeIntent("Liste todas as contas e seus tipos e saldos, incluindo CD, IRA e 401(k)."),
+    ).toBe("contas");
     expect(routeIntent("Quais contas existem, incluindo investimentos?")).toBe("contas");
   });
 
