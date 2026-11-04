@@ -126,6 +126,13 @@ export function classifyBalanceAccounts<T extends BalanceAccount>(accounts: T[])
     deposits: accounts.filter((account) => account.type === "depository"),
     investments: accounts.filter((account) => account.type === "investment"),
     debts: accounts.filter((account) => account.type === "credit" || account.type === "loan"),
+    otherAssets: accounts.filter(
+      (account) =>
+        account.type !== "depository" &&
+        account.type !== "investment" &&
+        account.type !== "credit" &&
+        account.type !== "loan",
+    ),
   };
 }
 
