@@ -1,4 +1,4 @@
-import { analyzeTransactions, routeIntent, sumTransactionsByCurrency } from "./category-analysis.ts";
+import { analyzeTransactions, dispatchChatIntent, routeIntent, sumTransactionsByCurrency } from "./category-analysis.ts";
 // Supabase Edge Function (Deno): dio-chat
 // Recebe { mensagem, historico } e responde { resposta, modo, meta } ou { erro }.
 // Lê contas e transações FICTÍCIAS da Plaid Sandbox (https://sandbox.plaid.com).
@@ -547,16 +547,14 @@ Deno.serve(async (req) => {
 
   try {
     const snap = await loadSnapshot();
-    const out =
-      intent === "contas"
-        ? accountsAnswer(snap)
-        : intent === "saldos"
-          ? balancesAnswer(snap)
-          : intent === "recentes"
-            ? recentAnswer(snap)
-            : intent === "categoria"
-              ? categoryAnswer(snap, mensagem)
-              : summaryAnswer(snap);
+    const out = dispatchChatIntent(intent, {
+      contas: () => accountsAnswer(snap),
+      saldos: () => balancesAnswer(snap),
+      recentes: () => recentAnswer(snap),
+      entradas: () => incomeAnswer(snap),
+      categoria: () => categoryAnswer(snap, mensagem),
+      resumo: () => summaryAnswer(snap),
+    });
 
     return json({
       resposta: out.text,
