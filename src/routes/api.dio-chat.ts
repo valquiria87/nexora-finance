@@ -4,8 +4,10 @@ import { parseDioChatResponse, chatRequestSchema } from "@/lib/chat-contract";
 import { getDioChatStatus, isRetryableDioChatError } from "@/lib/dio-chat-retry";
 import { retry } from "@/lib/retry";
 import type { DioChatSuccess } from "@/lib/dio-chat.service";
+import { readJsonBodyLimited, RequestBodyTooLargeError, sameOriginGuard } from "@/lib/request-security.server";
 
 const MAX_ATTEMPTS = 3;
+const MAX_REQUEST_BYTES = 64 * 1024;
 
 function errorJson(message: string, status: number) {
   return Response.json({ erro: message }, { status });
@@ -15,10 +17,14 @@ export const Route = createFileRoute("/api/dio-chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const originError = sameOriginGuard(request);
+        if (originError) return originError;
+
         let body: unknown;
         try {
-          body = await request.json();
-        } catch {
+          body = await readJsonBodyLimited(request, MAX_REQUEST_BYTES);
+        } catch (error) {
+          if (error instanceof RequestBodyTooLargeError) return errorJson(error.message, 413);
           return errorJson("O pedido não contém JSON válido.", 400);
         }
 
