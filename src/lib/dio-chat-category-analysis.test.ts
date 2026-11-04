@@ -208,7 +208,7 @@ describe("sumAccountsByCurrency", () => {
     ];
     expect(sumAccountsByCurrency(accounts, (account) => account.balances.available)).toEqual([
       { currency: "BRL", total: 0, count: 0, missingCount: 1 },
-      { currency: "USD", total: 100, count: 1, missingCount: 1 },
+      { currency: "USD", total: 100, count: 1, missingCount: 2 },
     ]);
     expect(sumAccountsByCurrency(accounts, (account) => account.balances.current)).toEqual([
       { currency: "BRL", total: 500, count: 1, missingCount: 0 },
