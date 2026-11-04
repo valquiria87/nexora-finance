@@ -91,3 +91,20 @@ export function analyzeTransactions(
     zeroAmountCount,
   };
 }
+
+
+export type ChatIntent = "contas" | "saldos" | "recentes" | "categoria" | "resumo" | "ajuda";
+
+export function routeIntent(message: string): ChatIntent {
+  const normalized = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  // Resumo geral tem prioridade sobre termos secundários como "categorias".
+  if (/resum|visao geral|panorama/.test(normalized)) {
+    return /conta/.test(normalized) ? "contas" : "resumo";
+  }
+  if (/gast|categoria|aliment|transporte|viage|compras|lazer/.test(normalized)) return "categoria";
+  if (/saldo|disponivel|divida|limite|quanto tenho/.test(normalized)) return "saldos";
+  if (/ultima|recente|extrato|transac|movimentac/.test(normalized)) return "recentes";
+  if (/conta|banco|cartao/.test(normalized)) return "contas";
+  return "ajuda";
+}

@@ -1,4 +1,4 @@
-import { analyzeTransactions, sumTransactionsByCurrency } from "./category-analysis.ts";
+import { analyzeTransactions, routeIntent, sumTransactionsByCurrency } from "./category-analysis.ts";
 // Supabase Edge Function (Deno): dio-chat
 // Recebe { mensagem, historico } e responde { resposta, modo, meta } ou { erro }.
 // Lê contas e transações FICTÍCIAS da Plaid Sandbox (https://sandbox.plaid.com).
@@ -472,15 +472,7 @@ const HELP = [
   "_Não faço pagamentos, transferências nem outras operações. Dados fictícios da Plaid Sandbox._",
 ].join("\n");
 
-function route(message: string): "contas" | "saldos" | "recentes" | "categoria" | "resumo" | "ajuda" {
-  const m = norm(message);
-  if (/gast|categoria|aliment|transporte|viage|compras|lazer/.test(m)) return "categoria";
-  if (/saldo|disponivel|divida|limite|quanto tenho/.test(m)) return "saldos";
-  if (/resum|visao geral|panorama/.test(m)) return /conta/.test(m) ? "contas" : "resumo";
-  if (/ultima|recente|extrato|transac|movimentac/.test(m)) return "recentes";
-  if (/conta|banco|cartao/.test(m)) return "contas";
-  return "ajuda";
-}
+
 
 // ---------- servidor ----------
 const json = (body: unknown, status = 200) =>
@@ -519,7 +511,7 @@ Deno.serve(async (req) => {
     return json({ erro: `A mensagem deve ter no máximo ${MAX_MESSAGE} caracteres.` }, 400);
   }
 
-  const intent = route(mensagem);
+  const intent = routeIntent(mensagem);
   if (intent === "ajuda") {
     return json({
       resposta: HELP,
