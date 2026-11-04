@@ -198,7 +198,6 @@ describe("recent transaction limits", () => {
 });
 
 
-
 describe("sumAccountsByCurrency", () => {
   it("soma valores de contas por moeda e preserva valores ausentes", () => {
     const accounts = [
