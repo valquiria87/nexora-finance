@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzeTransactions,
+  classifyBalanceAccounts,
   dispatchChatIntent,
   requestedRecentLimit,
   routeIntent,
@@ -132,8 +133,29 @@ describe("routeIntent", () => {
     expect(dispatchChatIntent(intent, handlers)).toBe("incomeAnswer");
   });
 
+  it("prioriza a listagem completa de contas mesmo quando a pergunta menciona saldos e tipos", () => {
+    expect(routeIntent("Liste todas as contas e seus tipos e saldos, incluindo CD, IRA e 401(k).")).toBe("contas");
+    expect(routeIntent("Quais contas existem, incluindo investimentos?")).toBe("contas");
+  });
+
   it("mantém perguntas específicas de gastos na rota de categorias", () => {
     expect(routeIntent("Mostre meus gastos por categoria.")).toBe("categoria");
+  });
+});
+
+describe("classifyBalanceAccounts", () => {
+  it("inclui depósitos sem saldo disponível e separa investimentos de dívidas", () => {
+    const accounts = [
+      { type: "depository", subtype: "checking", balances: { available: 100 } },
+      { type: "depository", subtype: "cd", balances: { available: null } },
+      { type: "investment", subtype: "ira", balances: { available: null } },
+      { type: "investment", subtype: "401k", balances: { available: null } },
+      { type: "loan", subtype: "student", balances: { available: null } },
+    ];
+    const groups = classifyBalanceAccounts(accounts);
+    expect(groups.deposits).toHaveLength(2);
+    expect(groups.investments.map((account) => account.subtype)).toEqual(["ira", "401k"]);
+    expect(groups.debts).toHaveLength(1);
   });
 });
 
