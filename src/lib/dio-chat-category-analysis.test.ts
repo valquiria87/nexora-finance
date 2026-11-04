@@ -153,11 +153,19 @@ describe("classifyBalanceAccounts", () => {
       { type: "investment", subtype: "ira", balances: { available: null } },
       { type: "investment", subtype: "401k", balances: { available: null } },
       { type: "loan", subtype: "student", balances: { available: null } },
+      { type: "other", subtype: "unknown", balances: { available: null } },
     ];
     const groups = classifyBalanceAccounts(accounts);
     expect(groups.deposits).toHaveLength(2);
     expect(groups.investments.map((account) => account.subtype)).toEqual(["ira", "401k"]);
     expect(groups.debts).toHaveLength(1);
+    expect(groups.otherAssets.map((account) => account.subtype)).toEqual(["unknown"]);
+    expect(
+      groups.deposits.length +
+        groups.investments.length +
+        groups.debts.length +
+        groups.otherAssets.length,
+    ).toBe(accounts.length);
   });
 });
 

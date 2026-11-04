@@ -201,8 +201,6 @@ const SUBTYPE_PT: Record<string, string> = {
 const typeLabel = (a: PlaidAccount) =>
   SUBTYPE_PT[(a.subtype ?? "").toLowerCase()] ?? a.subtype ?? a.type;
 
-const isDebtAccount = (a: PlaidAccount) => a.type === "credit" || a.type === "loan";
-
 // ---------- categorias ----------
 const CATEGORY_PT: Record<string, string> = {
   FOOD_AND_DRINK: "Alimentação",
@@ -246,14 +244,19 @@ function describeWindow(s: Snapshot, n: number): string {
 }
 
 function accountsAnswer(s: Snapshot): { text: string; registros: number } {
-  const cash = s.accounts.filter((a) => !isDebtAccount(a));
-  const debt = s.accounts.filter(isDebtAccount);
+  const groups = classifyBalanceAccounts(s.accounts);
+  const otherAssets = groups.otherAssets;
 
-  const cashRows = cash.map(
+  const assetRows = (accounts: PlaidAccount[]) =>
+    accounts.map(
+      (a) =>
+        `| ${cell(a.name)} | ${typeLabel(a)} | ${money(a.balances.current, currencyOf(a.balances))} | ${money(a.balances.available, currencyOf(a.balances))} |`,
+    );
+  const investmentRows = groups.investments.map(
     (a) =>
-      `| ${cell(a.name)} | ${typeLabel(a)} | ${money(a.balances.current, currencyOf(a.balances))} | ${money(a.balances.available, currencyOf(a.balances))} |`,
+      `| ${cell(a.name)} | ${typeLabel(a)} | ${money(a.balances.current, currencyOf(a.balances))} |`,
   );
-  const debtRows = debt.map(
+  const debtRows = groups.debts.map(
     (a) =>
       `| ${cell(a.name)} | ${typeLabel(a)} | ${money(a.balances.current, currencyOf(a.balances))} | ${money(a.balances.available, currencyOf(a.balances))} | ${money(a.balances.limit, currencyOf(a.balances))} |`,
   );
@@ -261,19 +264,26 @@ function accountsAnswer(s: Snapshot): { text: string; registros: number } {
   const text = [
     `Encontrei **${s.accounts.length} contas** de teste na Plaid Sandbox. **Todos os dados são fictícios.**`,
     "",
-    "**Dinheiro e investimentos**",
+    "**Contas de depósito**",
     "",
     "| Conta | Tipo | Saldo atual | Disponível |",
     "| --- | --- | --- | --- |",
-    ...cashRows,
+    ...assetRows(groups.deposits),
+    ...(otherAssets.length ? ["", "**Outros ativos**", "", "| Conta | Tipo | Saldo atual | Disponível |", "| --- | --- | --- | --- |", ...assetRows(otherAssets)] : []),
     "",
-    "**Dívidas e limites** (saldo atual = quanto se deve; \"disponível\" é crédito, não dinheiro)",
+    "**Investimentos e aposentadoria**",
+    "",
+    "| Conta | Tipo | Saldo atual |",
+    "| --- | --- | --- |",
+    ...investmentRows,
+    "",
+    "**Dívidas e limites** (saldo atual = quanto se deve; crédito disponível não é dinheiro)",
     "",
     "| Conta | Tipo | Dívida atual | Crédito disponível | Limite |",
     "| --- | --- | --- | --- | --- |",
     ...debtRows,
     "",
-    "_Não some as linhas como patrimônio: dívidas, limites e investimentos têm naturezas diferentes. Saldos vêm de `/accounts/get`, sem atualização em tempo real._",
+    "_Não some as linhas como patrimônio: depósitos, investimentos, dívidas e limites têm naturezas diferentes. Saldos vêm de `/accounts/get`, sem atualização em tempo real._",
   ].join("\n");
   return { text, registros: s.accounts.length };
 }
